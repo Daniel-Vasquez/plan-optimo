@@ -16,7 +16,7 @@ const { title = 'TrackFit', currentPage = '' } = Astro.props;
   <title>{title} · TrackFit</title>
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#0d0f14" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="TrackFit" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -194,6 +194,27 @@ const { title = 'TrackFit', currentPage = '' } = Astro.props;
         }
       };
     }
+
+    // Re-run badge + today-link after every View Transition
+    document.addEventListener('astro:page-load', function () {
+      const todayLink = document.getElementById('today-nav-link');
+      if (todayLink) {
+        todayLink.href = '/day/?date=' + new Date().toISOString().slice(0, 10);
+      }
+      try {
+        const cfg = JSON.parse(localStorage.getItem('trackfit_config') || 'null');
+        if (!cfg) return;
+        const start = new Date(cfg.startDate + 'T00:00:00');
+        const now = new Date(); now.setHours(0,0,0,0);
+        const diff = Math.floor((now.getTime() - start.getTime()) / (1000*60*60*24));
+        const week = Math.max(1, Math.min(16, Math.floor(diff/7)+1));
+        const badge = 'Sem ' + week + '/16';
+        const mb = document.getElementById('mobile-week-badge');
+        const sb = document.getElementById('sidebar-week-badge');
+        if (mb) mb.textContent = badge;
+        if (sb) sb.textContent = badge;
+      } catch (_) {}
+    });
   </script>
 
   <style is:global>

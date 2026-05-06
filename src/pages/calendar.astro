@@ -188,7 +188,7 @@ import Toast from '../components/Toast.astro';
     else renderMonthView();
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('astro:page-load', () => {
     document.getElementById('view-toggle')!.addEventListener('click', (e: any) => {
       const btn = e.target.closest('[data-view]') as HTMLElement | null;
       if (btn) setView(btn.dataset.view!);

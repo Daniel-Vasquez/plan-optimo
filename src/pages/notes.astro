@@ -297,7 +297,7 @@ import Toast from '../components/Toast.astro';
     renderTagFilters();
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('astro:page-load', () => {
     renderTagFilters();
     renderList();
 
