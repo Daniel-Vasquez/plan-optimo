@@ -1,0 +1,110 @@
+---
+export interface Props {
+  id: string;
+  label: string;
+  data: { labels: string[]; values: number[] };
+  color?: string;
+  fill?: boolean;
+  invertY?: boolean;
+  refLine?: number;
+}
+const { id, label, data, color = '#47c2ff', fill = false, invertY = false, refLine } = Astro.props;
+const dataJson = JSON.stringify(data);
+---
+<canvas id={id} class="w-full"></canvas>
+
+<script define:vars={{ id, label, dataJson, color, fill, invertY, refLine }}>
+  const data = JSON.parse(dataJson);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+
+  const plugins = [];
+  if (refLine !== undefined && refLine !== null) {
+    plugins.push({
+      id: 'refline-' + id,
+      afterDraw(chart) {
+        const { ctx: c, chartArea, scales } = chart;
+        if (!scales.y) return;
+        const y = scales.y.getPixelForValue(refLine);
+        c.save();
+        c.setLineDash([4, 4]);
+        c.strokeStyle = 'rgba(255,255,255,0.2)';
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(chartArea.left, y);
+        c.lineTo(chartArea.right, y);
+        c.stroke();
+        c.restore();
+      }
+    });
+  }
+
+  new Chart(ctx, {
+    type: 'line',
+    plugins,
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label,
+        data: data.values,
+        borderColor: color,
+        backgroundColor: fill ? color + '1a' : 'transparent',
+        fill,
+        tension: 0.4,
+        pointBackgroundColor: color,
+        pointBorderColor: color,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: window.innerWidth < 640 ? 1.6 : 2.2,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.07)' },
+          ticks: { color: '#8890a8', font: { family: 'DM Sans', size: 11 }, maxTicksLimit: 8 }
+        },
+        y: {
+          reverse: invertY,
+          grid: { color: 'rgba(255,255,255,0.07)' },
+          ticks: {
+            color: '#8890a8',
+            font: { family: 'DM Sans', size: 11 },
+            callback: invertY
+              ? (v) => {
+                  const m = Math.floor(v / 60);
+                  const s = Math.round(v % 60).toString().padStart(2, '0');
+                  return `${m}:${s}`;
+                }
+              : undefined
+          }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e2230',
+          titleColor: '#f0f2f8',
+          bodyColor: '#8890a8',
+          borderColor: 'rgba(255,255,255,0.13)',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: invertY
+            ? {
+                label(ctx) {
+                  const v = ctx.raw;
+                  const m = Math.floor(v / 60);
+                  const s = Math.round(v % 60).toString().padStart(2, '0');
+                  return ` ${m}:${s} min/km`;
+                }
+              }
+            : {}
+        }
+      }
+    }
+  });
+</script>

@@ -1,0 +1,205 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Progreso" currentPage="progress">
+  <div class="px-4 py-6 lg:px-8 lg:py-8 max-w-4xl mx-auto space-y-6" id="progress-root">
+    <h1 class="font-display text-3xl text-primary">PROGRESO</h1>
+    <div id="progress-content" class="space-y-6"></div>
+  </div>
+</Layout>
+
+<script>
+  import {
+    getRunSessions, getWaterHistory, getStreak, getMaxStreak,
+    getBestPace, getTotalDistance, getAvgWater, getCompletionRate, getAllSessions
+  } from '../scripts/storage.js';
+
+  declare global {
+    interface Window { Chart: any; }
+  }
+  declare var Chart: any;
+
+  function paceToSeconds(pace) {
+    if (!pace) return null;
+    const [m, s] = pace.split(':').map(Number);
+    if (isNaN(m) || isNaN(s)) return null;
+    return m * 60 + s;
+  }
+
+  function formatDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return new Intl.DateTimeFormat('es-MX', { month: 'short', day: 'numeric' }).format(d);
+  }
+
+  function emptyChart(msg) {
+    return `
+      <div class="flex flex-col items-center justify-center py-12 text-center">
+        <svg class="w-10 h-10 text-muted2 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <p class="text-sm text-muted">${msg}</p>
+      </div>
+    `;
+  }
+
+  function chartCard(title, subtitle, canvasId, extra = '') {
+    return `
+      <div class="bg-[#161920] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 lg:p-6">
+        <h2 class="text-sm font-semibold text-primary mb-0.5">${title}</h2>
+        <p class="text-xs text-muted mb-4">${subtitle}</p>
+        <div id="${canvasId}-wrapper"></div>
+        ${extra}
+      </div>
+    `;
+  }
+
+  function buildChart(id, labels, values, color, invertY, fill, refLine) {
+    if (!window.Chart) { setTimeout(() => buildChart(id, labels, values, color, invertY, fill, refLine), 200); return; }
+    const wrapper = document.getElementById(`${id}-wrapper`);
+    if (!wrapper) return;
+
+    if (labels.length < 2) {
+      wrapper.innerHTML = emptyChart('Aún no hay suficientes datos registrados.');
+      return;
+    }
+
+    wrapper.innerHTML = `<canvas id="${id}" class="w-full"></canvas>`;
+    const ctx = document.getElementById(id)!;
+
+    const plugins: any[] = [];
+    if (refLine !== undefined) {
+      plugins.push({
+        id: 'refline',
+        afterDraw(chart) {
+          const { ctx: c, chartArea, scales } = chart;
+          const y = scales.y.getPixelForValue(refLine);
+          c.save();
+          c.setLineDash([4, 4]);
+          c.strokeStyle = 'rgba(255,255,255,0.2)';
+          c.lineWidth = 1;
+          c.beginPath();
+          c.moveTo(chartArea.left, y);
+          c.lineTo(chartArea.right, y);
+          c.stroke();
+          c.restore();
+        }
+      });
+    }
+
+    new Chart(ctx, {
+      type: 'line',
+      plugins,
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          borderColor: color,
+          backgroundColor: fill ? color + '1a' : 'transparent',
+          fill,
+          tension: 0.4,
+          pointBackgroundColor: color,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: window.innerWidth < 640 ? 1.6 : 2.5,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.07)' },
+            ticks: { color: '#8890a8', font: { family: 'DM Sans', size: 11 }, maxTicksLimit: 8 }
+          },
+          y: {
+            reverse: invertY,
+            grid: { color: 'rgba(255,255,255,0.07)' },
+            ticks: {
+              color: '#8890a8',
+              font: { family: 'DM Sans', size: 11 },
+              callback: invertY
+                ? v => { const m = Math.floor(v/60); const s = Math.round(v%60).toString().padStart(2,'0'); return `${m}:${s}`; }
+                : undefined
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1e2230',
+            titleColor: '#f0f2f8',
+            bodyColor: '#8890a8',
+            borderColor: 'rgba(255,255,255,0.13)',
+            borderWidth: 1,
+            padding: 10,
+            callbacks: invertY
+              ? { label: ctx => { const v = ctx.raw; const m = Math.floor(v/60); const s = Math.round(v%60).toString().padStart(2,'0'); return ` ${m}:${s} min/km`; } }
+              : {}
+          }
+        }
+      }
+    });
+  }
+
+  function render() {
+    const runSessions = getRunSessions(12);
+    const waterHistory = getWaterHistory(14);
+    const streak = getStreak();
+    const maxStreak = getMaxStreak();
+    const bestPace = getBestPace();
+    const totalDist = Math.round(getTotalDistance() * 10) / 10;
+    const avgWater = getAvgWater(7);
+    const completionRate = getCompletionRate();
+
+    const paceLabels = runSessions.filter(s => s.running?.pace).map(s => formatDate(s.date));
+    const paceValues = runSessions.filter(s => s.running?.pace).map(s => paceToSeconds(s.running.pace));
+
+    const distLabels = runSessions.filter(s => s.running?.distance).map(s => formatDate(s.date));
+    const distValues = runSessions.filter(s => s.running?.distance).map(s => Number(s.running.distance));
+    const totalDistAcc = distValues.reduce((a, b) => a + b, 0);
+
+    const waterLabels = waterHistory.map(h => formatDate(h.date));
+    const waterValues = waterHistory.map(h => h.water);
+
+    const statsHtml = `
+      <div class="bg-[#161920] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 lg:p-6">
+        <h2 class="text-sm font-semibold text-primary mb-4">Estadísticas generales</h2>
+        <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          ${[
+            { label: 'Mejor ritmo', value: bestPace || '—', unit: bestPace ? 'min/km' : '' },
+            { label: 'Distancia total', value: totalDist.toFixed(1), unit: 'km' },
+            { label: 'Agua promedio (7d)', value: avgWater.toFixed(1), unit: 'L/día' },
+            { label: 'Sesiones completadas', value: completionRate + '%', unit: '' },
+            { label: 'Racha actual', value: streak.toString(), unit: 'días' },
+            { label: 'Racha máxima', value: maxStreak.toString(), unit: 'días' },
+          ].map(s => `
+            <div>
+              <p class="text-xs text-muted uppercase tracking-wider mb-1">${s.label}</p>
+              <p class="text-xl font-bold text-primary">${s.value} <span class="text-sm font-normal text-muted">${s.unit}</span></p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    document.getElementById('progress-content')!.innerHTML = `
+      ${chartCard('Ritmo en carrera', 'Últimas 12 sesiones de carrera (menor = más rápido)', 'pace-chart')}
+      ${chartCard(
+        'Distancia por sesión',
+        'Kilómetros recorridos por sesión',
+        'dist-chart',
+        `<p class="text-xs text-muted mt-3">Total acumulado: <strong class="text-primary">${totalDistAcc.toFixed(1)} km</strong></p>`
+      )}
+      ${chartCard('Agua diaria', 'Últimos 14 días · Línea de referencia en 2 L', 'water-chart')}
+      ${statsHtml}
+    `;
+
+    setTimeout(() => {
+      buildChart('pace-chart', paceLabels, paceValues, '#47c2ff', true, false, undefined);
+      buildChart('dist-chart', distLabels, distValues, '#47c2ff', false, false, undefined);
+      buildChart('water-chart', waterLabels, waterValues, '#47c2ff', false, true, 2);
+    }, 100);
+  }
+
+  document.addEventListener('DOMContentLoaded', render);
+</script>

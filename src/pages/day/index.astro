@@ -1,0 +1,312 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Toast from '../../components/Toast.astro';
+---
+<Layout title="Registro del día" currentPage="today">
+  <Toast />
+  <div class="px-4 py-6 lg:px-8 lg:py-8 max-w-2xl mx-auto pb-32 lg:pb-10">
+    <div id="day-content">
+      <div class="text-muted text-sm">Cargando...</div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import {
+    getSession, saveSession, getSessionTypeForDate, getCurrentWeek, getConfig
+  } from '../../scripts/storage.js';
+
+  const SESSION_PLAN = {
+    1: { type: 'fuerza', label: 'Fuerza', exercises: ['Sentadilla goblet', 'P. muerto rumano', 'Zancadas', 'Hip thrust', 'Plancha frontal/lateral'] },
+    2: { type: 'mixto', label: 'Carrera + Fuerza', morning: 'Intervalos 400m × 6–8 a 4:45–5:00 min/km', exercises: ['Press banca', 'Remo unilateral', 'Fondos', 'Curl bíceps'] },
+    3: { type: 'descanso', label: 'Descanso activo', notes: 'Movilidad, caminata opcional' },
+    4: { type: 'fuerza', label: 'Fuerza', exercises: ['Sentadilla sumo', 'Ext. cadera', 'Step-up', 'Abdominal bicicleta'] },
+    5: { type: 'mixto', label: 'Carrera + Fuerza', morning: 'Tempo/Fartlek 3–4 km a 5:20–5:35 min/km', exercises: ['Press militar', 'Elev. laterales', 'Remo mentón', 'Ext. tríceps'] },
+    6: { type: 'voleibol', label: 'Voleibol', notes: '8am–12pm' },
+    0: { type: 'cardio', label: 'Carrera larga', running: 'Carrera larga 10–15 km a 6:30–6:50 min/km' },
+  };
+
+  const typeColors = {
+    fuerza:   '#e8ff47',
+    cardio:   '#47c2ff',
+    mixto:    '#ff6b35',
+    descanso: '#8890a8',
+    voleibol: '#47c2ff',
+  };
+  const typeBg = {
+    fuerza:   'rgba(232,255,71,0.1)',
+    cardio:   'rgba(71,194,255,0.1)',
+    mixto:    'rgba(255,107,53,0.1)',
+    descanso: 'rgba(136,144,168,0.07)',
+    voleibol: 'rgba(71,194,255,0.1)',
+  };
+  const typeBorder = {
+    fuerza:   'rgba(232,255,71,0.3)',
+    cardio:   'rgba(71,194,255,0.3)',
+    mixto:    'rgba(255,107,53,0.3)',
+    descanso: 'rgba(136,144,168,0.2)',
+    voleibol: 'rgba(71,194,255,0.3)',
+  };
+
+  let saveDebounceTimer: number | undefined = undefined;
+  let state: any = {};
+
+  function getDateFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const d = params.get('date');
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    // Try from path /day/YYYY-MM-DD
+    const match = window.location.pathname.match(/(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function debounce(fn, ms = 500) {
+    clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = setTimeout(fn, ms);
+  }
+
+  function save(date) {
+    saveSession(date, state);
+  }
+
+  function parsePaceToSeconds(pace) {
+    const parts = pace.split(':');
+    if (parts.length !== 2) return null;
+    const m = parseInt(parts[0]);
+    const s = parseInt(parts[1]);
+    if (isNaN(m) || isNaN(s)) return null;
+    return m * 60 + s;
+  }
+
+  function render() {
+    const date = getDateFromUrl();
+    const plan = getSessionTypeForDate(date);
+    const session = getSession(date) || {};
+    const week = getCurrentWeek();
+    const config = getConfig();
+
+    state = {
+      completed: session.completed || false,
+      type: session.type || plan.type,
+      week: session.week || week,
+      water: session.water ?? 0,
+      note: session.note || '',
+      running: session.running || { distance: '', pace: '' },
+    };
+
+    const dateObj = new Date(date + 'T00:00:00');
+    const dateFmt = new Intl.DateTimeFormat('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dateLabel = dateFmt.format(dateObj);
+    const type = state.type;
+    const color = typeColors[type] || '#8890a8';
+    const bg = typeBg[type] || 'transparent';
+    const border = typeBorder[type] || 'rgba(255,255,255,0.13)';
+    const planDay = SESSION_PLAN[dateObj.getDay()];
+    const showRunning = type === 'cardio' || type === 'mixto';
+
+    let planHtml = '';
+    if (planDay) {
+      if (planDay.exercises) {
+        planHtml += `<ul class="space-y-1">${planDay.exercises.map(e => `<li class="flex items-center gap-2 text-sm text-muted"><span class="w-1 h-1 rounded-full bg-muted2 flex-shrink-0 mt-1.5"></span>${e}</li>`).join('')}</ul>`;
+      }
+      if (planDay.morning) {
+        planHtml += `<div class="text-sm text-muted mt-2"><span class="text-muted2 text-xs uppercase tracking-wider">Carrera AM · </span>${planDay.morning}</div>`;
+      }
+      if (planDay.running) {
+        planHtml += `<div class="text-sm text-muted">${planDay.running}</div>`;
+      }
+      if (planDay.notes) {
+        planHtml += `<div class="text-sm text-muted">${planDay.notes}</div>`;
+      }
+    }
+
+    document.getElementById('day-content')!.innerHTML = `
+      <div class="space-y-5">
+        <div>
+          <a href="/" class="text-xs text-muted hover:text-primary flex items-center gap-1 mb-3 transition-colors">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Dashboard
+          </a>
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <p class="text-xs text-muted capitalize mb-1">${dateLabel}</p>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-display text-2xl" style="color:${color}">${(planDay?.label || plan.label || '').toUpperCase()}</span>
+                <span class="text-xs px-2.5 py-1 rounded-full font-semibold" style="background:${bg};color:${color};border:1px solid ${border}">
+                  ${type.charAt(0).toUpperCase() + type.slice(1)}
+                </span>
+              </div>
+            </div>
+            <span class="text-xs bg-surface2 text-muted px-2 py-1 rounded-full self-start">Sem ${week}</span>
+          </div>
+        </div>
+
+        <div class="rounded-xl border p-1 flex" style="border-color:${border}; background:${bg}">
+          <button id="btn-completed" class="flex-1 py-3 rounded-lg text-sm font-bold transition-all" style="${state.completed ? `background:${color};color:#0d0f14` : 'color:#8890a8'}">
+            COMPLETADA
+          </button>
+          <button id="btn-pending" class="flex-1 py-3 rounded-lg text-sm font-bold transition-all" style="${!state.completed ? 'background:rgba(255,255,255,0.08);color:#f0f2f8' : 'color:#8890a8'}">
+            PENDIENTE
+          </button>
+        </div>
+
+        <div class="bg-[#161920] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 space-y-5">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs text-muted uppercase tracking-wider">Agua</label>
+              <span id="water-value" class="text-sm font-bold text-primary">${Number(state.water).toFixed(1)} L</span>
+            </div>
+            <input type="range" id="water-slider" min="0" max="4" step="0.25" value="${state.water}"
+              class="w-full h-1.5 rounded-full cursor-pointer"
+              style="accent-color: #47c2ff"
+            />
+            <div class="flex justify-between text-[10px] text-muted2 mt-1">
+              <span>0 L</span><span>2 L</span><span>4 L</span>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs text-muted uppercase tracking-wider">Nota del día</label>
+              <span id="note-chars" class="text-[10px] text-muted2">${(state.note || '').length}/500</span>
+            </div>
+            <textarea id="note-input" maxlength="500"
+              placeholder="¿Cómo te sentiste? ¿Algo a destacar?..."
+              class="w-full bg-[#1e2230] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 py-2.5 text-sm text-primary placeholder-muted2 focus:outline-none focus:border-[rgba(255,255,255,0.2)] resize-none transition-colors"
+              rows="3"
+            >${state.note || ''}</textarea>
+          </div>
+        </div>
+
+        ${showRunning ? `
+        <div class="bg-[#161920] border border-[rgba(71,194,255,0.2)] rounded-xl p-4 space-y-4">
+          <h3 class="text-xs text-muted uppercase tracking-wider flex items-center gap-2">
+            <svg class="w-3.5 h-3.5 text-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Carrera
+          </h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-muted mb-1.5">Distancia (km)</label>
+              <input type="number" id="run-distance" value="${state.running.distance || ''}" min="0" max="100" step="0.1"
+                class="w-full bg-[#1e2230] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 py-2.5 text-primary text-sm focus:outline-none focus:border-[rgba(71,194,255,0.5)] transition-colors"
+                placeholder="0.0"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1.5">Ritmo (MM:SS /km)</label>
+              <input type="text" id="run-pace" value="${state.running.pace || ''}"
+                class="w-full bg-[#1e2230] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 py-2.5 text-primary text-sm focus:outline-none focus:border-[rgba(71,194,255,0.5)] transition-colors"
+                placeholder="05:55" maxlength="5"
+              />
+              <p id="pace-error" class="text-[10px] text-orange mt-1 hidden">Ritmo debe estar entre 3:00 y 12:00</p>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="bg-[#161920] border border-[rgba(255,255,255,0.07)] rounded-xl overflow-hidden">
+          <button id="plan-toggle" class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[rgba(255,255,255,0.03)] transition-colors">
+            <span class="text-xs text-muted uppercase tracking-wider">Plan de hoy</span>
+            <svg id="plan-chevron" class="w-4 h-4 text-muted2 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div id="plan-body" class="hidden px-4 pb-4 space-y-2">
+            ${planHtml || '<p class="text-sm text-muted">No hay plan registrado para este día.</p>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="fixed bottom-20 left-0 right-0 px-4 lg:hidden z-30">
+        <button id="save-btn" class="w-full py-4 rounded-xl font-bold text-base shadow-xl transition-all active:scale-95" style="background:${color};color:#0d0f14">
+          Guardar sesión
+        </button>
+      </div>
+
+      <div class="hidden lg:block mt-6">
+        <button id="save-btn-desktop" class="px-8 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 hover:opacity-90" style="background:${color};color:#0d0f14">
+          Guardar sesión
+        </button>
+      </div>
+    `;
+
+    document.getElementById('btn-completed')!.addEventListener('click', () => {
+      state.completed = true;
+      updateToggle(color);
+      debounce(() => save(date));
+    });
+    document.getElementById('btn-pending')!.addEventListener('click', () => {
+      state.completed = false;
+      updateToggle(color);
+      debounce(() => save(date));
+    });
+
+    document.getElementById('water-slider')!.addEventListener('input', (e: any) => {
+      state.water = parseFloat(e.target.value);
+      document.getElementById('water-value')!.textContent = state.water.toFixed(1) + ' L';
+      debounce(() => save(date));
+    });
+
+    document.getElementById('note-input')!.addEventListener('input', (e: any) => {
+      state.note = e.target.value;
+      document.getElementById('note-chars')!.textContent = `${state.note.length}/500`;
+      debounce(() => save(date));
+    });
+
+    if (showRunning) {
+      document.getElementById('run-distance')!.addEventListener('input', (e: any) => {
+        state.running.distance = parseFloat(e.target.value) || 0;
+        debounce(() => save(date));
+      });
+      document.getElementById('run-pace')!.addEventListener('input', (e: any) => {
+        const raw = e.target.value.replace(/[^0-9:]/g, '');
+        const digits = raw.replace(/:/g, '');
+        let formatted = digits;
+        if (digits.length > 2) {
+          formatted = digits.slice(0, digits.length - 2) + ':' + digits.slice(-2);
+        }
+        if (formatted !== e.target.value) e.target.value = formatted;
+        const secs = parsePaceToSeconds(formatted);
+        const paceError = document.getElementById('pace-error')!;
+        if (formatted.includes(':') && secs !== null && (secs < 180 || secs > 720)) {
+          paceError.classList.remove('hidden');
+        } else {
+          paceError.classList.add('hidden');
+        }
+        state.running.pace = formatted;
+        debounce(() => save(date));
+      });
+    }
+
+    document.getElementById('plan-toggle')!.addEventListener('click', () => {
+      const body = document.getElementById('plan-body')!;
+      const chevron = document.getElementById('plan-chevron')!;
+      body.classList.toggle('hidden');
+      chevron.style.transform = body.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    });
+
+    const handleSave = () => {
+      save(date);
+      if (window.showToast) window.showToast('Sesión guardada correctamente');
+      setTimeout(() => { window.location.href = '/'; }, 1200);
+    };
+    document.getElementById('save-btn')?.addEventListener('click', handleSave);
+    document.getElementById('save-btn-desktop')?.addEventListener('click', handleSave);
+  }
+
+  function updateToggle(color: string) {
+    const btnC = document.getElementById('btn-completed')!;
+    const btnP = document.getElementById('btn-pending')!;
+    if (state.completed) {
+      btnC.style.background = color;
+      btnC.style.color = '#0d0f14';
+      btnP.style.background = 'transparent';
+      btnP.style.color = '#8890a8';
+    } else {
+      btnC.style.background = 'transparent';
+      btnC.style.color = '#8890a8';
+      btnP.style.background = 'rgba(255,255,255,0.08)';
+      btnP.style.color = '#f0f2f8';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', render);
+</script>

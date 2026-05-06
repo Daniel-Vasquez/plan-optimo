@@ -1,0 +1,211 @@
+---
+import Layout from '../layouts/Layout.astro';
+import MetricCard from '../components/MetricCard.astro';
+import SessionBadge from '../components/SessionBadge.astro';
+import DayPill from '../components/DayPill.astro';
+import WeekBar from '../components/WeekBar.astro';
+import Toast from '../components/Toast.astro';
+---
+<Layout title="Dashboard" currentPage="dashboard">
+  <Toast />
+  <div class="px-4 py-6 lg:px-8 lg:py-8 max-w-4xl mx-auto" id="dashboard-root">
+    <!-- Loading state -->
+    <div id="dashboard-loading" class="text-muted text-sm">Cargando...</div>
+    <!-- Content (hidden until JS runs) -->
+    <div id="dashboard-content" class="hidden space-y-6">
+
+      <!-- A) Hero -->
+      <section>
+        <p id="hero-greeting" class="text-muted text-sm mb-0.5"></p>
+        <h1 id="hero-date" class="text-xl font-semibold text-primary mb-3"></h1>
+        <div id="hero-badge-row" class="flex items-center gap-2 mb-4 flex-wrap"></div>
+        <div id="session-type-row" class="flex items-center gap-3 mb-5"></div>
+        <a id="cta-btn" href="#"
+          class="inline-flex items-center gap-2 bg-yellow text-base font-bold px-5 py-3 rounded-xl hover:bg-yellow/90 active:scale-95 transition-all text-sm">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Registrar sesión de hoy
+        </a>
+      </section>
+
+      <!-- Week bar -->
+      <div id="week-bar-wrapper"></div>
+
+      <!-- B) Metrics -->
+      <section>
+        <h2 class="text-xs text-muted uppercase tracking-wider mb-3">Métricas rápidas</h2>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" id="metrics-grid"></div>
+      </section>
+
+      <!-- C) Mini calendar -->
+      <section>
+        <h2 class="text-xs text-muted uppercase tracking-wider mb-3">Esta semana</h2>
+        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" id="week-pills"></div>
+      </section>
+
+      <!-- D) Recent notes -->
+      <section id="notes-section">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs text-muted uppercase tracking-wider">Últimas notas</h2>
+          <a href="/notes" class="text-xs text-yellow hover:underline">Ver todas →</a>
+        </div>
+        <div id="notes-list" class="space-y-2"></div>
+      </section>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import {
+    getConfig, getCurrentWeek, getSessionTypeForDate, getSession,
+    getStreak, getWeekCompletion, getBestPace, getWaterHistory,
+    getNotes
+  } from '../scripts/storage.js';
+
+  function init() {
+    const config = getConfig();
+    const loading = document.getElementById('dashboard-loading')!;
+    const content = document.getElementById('dashboard-content')!;
+    if (!config) {
+      loading.textContent = '';
+      content.classList.remove('hidden');
+      return;
+    }
+    loading.remove();
+    content.classList.remove('hidden');
+
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    const week = getCurrentWeek();
+    const plan = getSessionTypeForDate(todayStr);
+    const todaySession = getSession(todayStr);
+
+    // Greeting
+    const hour = today.getHours();
+    const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
+    document.getElementById('hero-greeting')!.textContent = `${greeting}, ${config.name}`;
+
+    // Date
+    const dateFmt = new Intl.DateTimeFormat('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dateStr = dateFmt.format(today);
+    document.getElementById('hero-date')!.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+
+    // Phase
+    const phases: [number, string][] = [[4,'Base'],[8,'Construcción'],[12,'Intensificación'],[16,'Peak & Taper']];
+    const phase = phases.find(([w]) => week <= w)?.[1] || 'Peak & Taper';
+    const badgeRow = document.getElementById('hero-badge-row')!;
+    badgeRow.innerHTML = `
+      <span class="text-xs bg-surface2 text-muted px-3 py-1 rounded-full">Semana ${week} · Fase ${phase}</span>
+    `;
+
+    // Session type
+    const colorMap: any = { fuerza: '#e8ff47', cardio: '#47c2ff', mixto: '#ff6b35', descanso: '#8890a8', voleibol: '#47c2ff' };
+    const typeRow = document.getElementById('session-type-row')!;
+    const color = colorMap[plan.type] || '#8890a8';
+    typeRow.innerHTML = `
+      <span class="font-display text-3xl" style="color:${color}">${plan.label.toUpperCase()}</span>
+      ${todaySession?.completed ? '<span class="text-green-400 text-sm flex items-center gap-1"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Completada</span>' : ''}
+    `;
+
+    // CTA
+    (document.getElementById('cta-btn') as HTMLAnchorElement).href = `/day/?date=${todayStr}`;
+
+    // Week bar
+    document.getElementById('week-bar-wrapper')!.innerHTML = `
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-muted">Semana <strong class="text-primary">${week}</strong> de 16</span>
+          <span class="text-muted">${phase}</span>
+        </div>
+        <div class="h-1.5 bg-surface2 rounded-full overflow-hidden">
+          <div class="h-full bg-yellow rounded-full transition-all duration-500" style="width:${Math.round(week/16*100)}%"></div>
+        </div>
+      </div>
+    `;
+
+    // Metrics
+    const streak = getStreak();
+    const weekComp = getWeekCompletion();
+    const bestPace = getBestPace();
+    const waterToday = getSession(todayStr)?.water ?? null;
+
+    const metricsGrid = document.getElementById('metrics-grid')!;
+    const metrics = [
+      { label: 'Racha actual', value: streak.toString(), unit: 'días' },
+      { label: 'Esta semana', value: `${weekComp.completed} / ${weekComp.total}`, unit: 'sesiones' },
+      { label: 'Último ritmo 5K', value: bestPace || '—', unit: bestPace ? 'min/km' : '' },
+      { label: 'Agua hoy', value: waterToday !== null ? waterToday.toFixed(1) : '—', unit: waterToday !== null ? 'L' : '' },
+    ];
+    metricsGrid.innerHTML = metrics.map(m => `
+      <div class="bg-surface border border-[rgba(255,255,255,0.07)] rounded-xl p-4 flex flex-col gap-1">
+        <span class="text-xs text-muted uppercase tracking-wider">${m.label}</span>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span class="text-2xl font-bold text-primary">${m.value}</span>
+          ${m.unit ? `<span class="text-sm text-muted">${m.unit}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    // Week pills
+    const weekPills = document.getElementById('week-pills')!;
+    const startOfWeek = new Date(today);
+    const dow = today.getDay();
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    startOfWeek.setDate(today.getDate() + mondayOffset);
+
+    const pillsHtml: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      const dStr = d.toISOString().slice(0, 10);
+      const sesh = getSession(dStr);
+      const planDay = getSessionTypeForDate(dStr);
+      const isToday = dStr === todayStr;
+      const dayInitials = ['D','L','M','X','J','V','S'];
+      const initial = dayInitials[d.getDay()];
+      const dayNum = d.getDate();
+      const dotColorMap = { fuerza:'bg-yellow', cardio:'bg-blue', mixto:'bg-orange', descanso:'bg-muted', voleibol:'bg-blue' };
+      const dotColor = dotColorMap[sesh?.type || planDay?.type] || 'bg-muted2';
+      const borderClass = isToday ? 'border-2 border-yellow bg-yellow/5' : 'border border-[rgba(255,255,255,0.07)] bg-[#161920]';
+      const completedIcon = sesh?.completed
+        ? `<svg class="w-3.5 h-3.5 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
+        : `<span class="w-2 h-2 rounded-full ${dotColor}"></span>`;
+      pillsHtml.push(`
+        <a href="/day/?date=${dStr}" class="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[52px] flex-shrink-0 ${borderClass}">
+          <span class="text-[10px] uppercase tracking-wider ${isToday ? 'text-yellow' : 'text-muted'}">${initial}</span>
+          <span class="text-sm font-semibold ${isToday ? 'text-yellow' : 'text-primary'}">${dayNum}</span>
+          ${completedIcon}
+        </a>
+      `);
+    }
+    weekPills.innerHTML = pillsHtml.join('');
+
+    // Notes
+    const notes = getNotes().slice(0, 3);
+    const notesList = document.getElementById('notes-list')!;
+    if (notes.length === 0) {
+      notesList.innerHTML = `
+        <div class="bg-surface border border-[rgba(255,255,255,0.07)] rounded-xl p-6 text-center">
+          <svg class="w-8 h-8 text-muted2 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <p class="text-sm text-muted">No hay notas aún.</p>
+          <a href="/notes" class="text-xs text-yellow mt-1 inline-block hover:underline">Crear primera nota →</a>
+        </div>
+      `;
+    } else {
+      notesList.innerHTML = notes.map(n => {
+        const noteDate = new Intl.DateTimeFormat('es-MX', { month: 'short', day: 'numeric' }).format(new Date(n.date + 'T00:00:00'));
+        const preview = (n.content || '').slice(0, 80) + ((n.content || '').length > 80 ? '…' : '');
+        return `
+          <a href="/notes" class="block bg-surface border border-[rgba(255,255,255,0.07)] rounded-xl p-4 hover:border-[rgba(255,255,255,0.13)] transition-colors">
+            <div class="flex items-start justify-between gap-2">
+              <h3 class="text-sm font-semibold text-primary truncate">${n.title || 'Sin título'}</h3>
+              <span class="text-[10px] text-muted2 flex-shrink-0">${noteDate}</span>
+            </div>
+            ${preview ? `<p class="text-xs text-muted mt-1 line-clamp-2">${preview}</p>` : ''}
+          </a>
+        `;
+      }).join('');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>

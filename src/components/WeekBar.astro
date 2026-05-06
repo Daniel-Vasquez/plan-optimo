@@ -1,0 +1,25 @@
+---
+export interface Props {
+  week: number;
+  total?: number;
+}
+const { week, total = 16 } = Astro.props;
+const pct = Math.round((week / total) * 100);
+
+const phases: [number, string][] = [
+  [4, 'Base'],
+  [8, 'Construcción'],
+  [12, 'Intensificación'],
+  [16, 'Peak & Taper'],
+];
+const phase = phases.find(([w]) => week <= w)?.[1] || 'Peak & Taper';
+---
+<div class="space-y-1.5">
+  <div class="flex items-center justify-between text-xs">
+    <span class="text-muted">Semana <strong class="text-primary">{week}</strong> de {total}</span>
+    <span class="text-muted">{phase}</span>
+  </div>
+  <div class="h-1.5 bg-surface2 rounded-full overflow-hidden">
+    <div class="h-full bg-yellow rounded-full transition-all duration-500" style={`width: ${pct}%`}></div>
+  </div>
+</div>

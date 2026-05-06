@@ -1,0 +1,39 @@
+---
+export interface Props {
+  date: string;
+  session?: { type?: string; completed?: boolean } | null;
+  isToday?: boolean;
+}
+const { date, session, isToday = false } = Astro.props;
+
+const d = new Date(date + 'T00:00:00');
+const dayInitials = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+const initial = dayInitials[d.getDay()];
+const dayNum = d.getDate();
+
+const dotColorMap: Record<string, string> = {
+  fuerza:   'bg-yellow',
+  cardio:   'bg-blue',
+  mixto:    'bg-orange',
+  descanso: 'bg-muted',
+  voleibol: 'bg-blue',
+};
+
+const dotColor = session?.type ? dotColorMap[session.type] || 'bg-muted2' : 'bg-muted2';
+const completed = session?.completed;
+---
+<a
+  href={`/day/${date}`}
+  class={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[52px]
+    ${isToday ? 'border-2 border-yellow bg-yellow/5' : 'border border-border hover:border-border2 bg-surface'}
+  `}
+>
+  <span class={`text-[10px] uppercase tracking-wider ${isToday ? 'text-yellow' : 'text-muted'}`}>{initial}</span>
+  <span class={`text-sm font-semibold ${isToday ? 'text-yellow' : 'text-primary'}`}>{dayNum}</span>
+  {completed
+    ? <svg class="w-3.5 h-3.5 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    : session?.type
+      ? <span class={`w-2 h-2 rounded-full ${dotColor}`}></span>
+      : <span class="w-2 h-2 rounded-full bg-muted2/40"></span>
+  }
+</a>

@@ -1,0 +1,198 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Toast from '../components/Toast.astro';
+---
+<Layout title="Calendario" currentPage="calendar">
+  <Toast />
+  <div class="px-4 py-6 lg:px-8 lg:py-8 max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="font-display text-3xl text-primary">CALENDARIO</h1>
+      <div class="flex bg-surface2 rounded-lg p-1 text-sm" id="view-toggle">
+        <button data-view="week" class="toggle-btn px-3 py-1 rounded-md transition-colors">Semana</button>
+        <button data-view="month" class="toggle-btn px-3 py-1 rounded-md transition-colors">Mes</button>
+      </div>
+    </div>
+
+    <div id="calendar-content"></div>
+  </div>
+</Layout>
+
+<script>
+  import { getAllSessions, getSessionTypeForDate, getCurrentWeek } from '../scripts/storage.js';
+
+  const typeColors = {
+    fuerza:   { bg: 'rgba(232,255,71,0.15)',  text: '#e8ff47',  border: 'rgba(232,255,71,0.3)' },
+    cardio:   { bg: 'rgba(71,194,255,0.15)',   text: '#47c2ff',  border: 'rgba(71,194,255,0.3)' },
+    mixto:    { bg: 'rgba(255,107,53,0.15)',   text: '#ff6b35',  border: 'rgba(255,107,53,0.3)' },
+    descanso: { bg: 'rgba(136,144,168,0.1)',   text: '#8890a8',  border: 'rgba(136,144,168,0.2)' },
+    voleibol: { bg: 'rgba(71,194,255,0.15)',   text: '#47c2ff',  border: 'rgba(71,194,255,0.3)' },
+  };
+  const typeLabels = { fuerza:'Fuerza', cardio:'Cardio', mixto:'Mixto', descanso:'Descanso', voleibol:'Voleibol' };
+
+  let currentView = window.innerWidth >= 1024 ? 'month' : 'week';
+  let currentDate = new Date();
+  currentDate.setHours(0,0,0,0);
+
+  function isoDate(d) { return d.toISOString().slice(0,10); }
+  function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+
+  function getMondayOfWeek(d) {
+    const r = new Date(d);
+    const dow = r.getDay();
+    const diff = dow === 0 ? -6 : 1 - dow;
+    r.setDate(r.getDate() + diff);
+    return r;
+  }
+
+  function renderWeekView() {
+    const sessions = getAllSessions();
+    const today = new Date(); today.setHours(0,0,0,0);
+    const monday = getMondayOfWeek(currentDate);
+
+    const weekNum = getCurrentWeek();
+    const dayNames = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+
+    let html = `
+      <div class="flex items-center justify-between mb-4">
+        <button id="prev-btn" class="flex items-center gap-1 text-muted hover:text-primary transition-colors px-3 py-2 rounded-lg hover:bg-surface2">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Anterior
+        </button>
+        <span class="text-sm text-muted">Semana ${weekNum} · ${new Intl.DateTimeFormat('es-MX',{month:'long',year:'numeric'}).format(monday)}</span>
+        <button id="next-btn" class="flex items-center gap-1 text-muted hover:text-primary transition-colors px-3 py-2 rounded-lg hover:bg-surface2">
+          Siguiente
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="grid grid-cols-7 gap-2">
+    `;
+
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(monday, i);
+      const dStr = isoDate(d);
+      const session = sessions[dStr];
+      const plan = getSessionTypeForDate(dStr);
+      const type = session?.type || plan?.type || 'descanso';
+      const colors = typeColors[type] || typeColors.descanso;
+      const isToday = dStr === isoDate(today);
+      const completed = session?.completed;
+
+      html += `
+        <a href="/day/?date=${dStr}" class="flex flex-col items-center gap-1.5 p-2 lg:p-3 rounded-xl border transition-colors hover:border-[rgba(255,255,255,0.2)]
+          ${isToday ? 'border-yellow/50 bg-yellow/5' : 'border-[rgba(255,255,255,0.07)] bg-[#161920]'}">
+          <span class="text-[10px] uppercase tracking-wider text-muted">${dayNames[i]}</span>
+          <span class="text-base lg:text-lg font-bold ${isToday ? 'text-yellow' : 'text-primary'}">${d.getDate()}</span>
+          <span class="text-[9px] lg:text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style="background:${colors.bg};color:${colors.text}">${typeLabels[type]}</span>
+          ${completed
+            ? `<svg class="w-4 h-4 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`
+            : `<svg class="w-4 h-4 text-muted2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>`
+          }
+        </a>
+      `;
+    }
+    html += '</div>';
+
+    document.getElementById('calendar-content')!.innerHTML = html;
+    document.getElementById('prev-btn')!.addEventListener('click', () => {
+      currentDate = addDays(getMondayOfWeek(currentDate), -7);
+      renderWeekView();
+    });
+    document.getElementById('next-btn')!.addEventListener('click', () => {
+      currentDate = addDays(getMondayOfWeek(currentDate), 7);
+      renderWeekView();
+    });
+  }
+
+  function renderMonthView() {
+    const sessions = getAllSessions();
+    const today = new Date(); today.setHours(0,0,0,0);
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Start from Monday of first week
+    const startDow = firstDay.getDay();
+    const startOffset = startDow === 0 ? -6 : 1 - startDow;
+    const gridStart = addDays(firstDay, startOffset);
+
+    const monthName = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(firstDay);
+
+    let html = `
+      <div class="flex items-center justify-between mb-4">
+        <button id="prev-btn" class="flex items-center gap-1 text-muted hover:text-primary transition-colors px-3 py-2 rounded-lg hover:bg-surface2">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Anterior
+        </button>
+        <span class="text-sm font-semibold text-primary capitalize">${monthName}</span>
+        <button id="next-btn" class="flex items-center gap-1 text-muted hover:text-primary transition-colors px-3 py-2 rounded-lg hover:bg-surface2">
+          Siguiente
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="grid grid-cols-7 gap-1 mb-1">
+        ${['L','M','X','J','V','S','D'].map(d => `<div class="text-center text-[10px] text-muted uppercase py-1">${d}</div>`).join('')}
+      </div>
+      <div class="grid grid-cols-7 gap-1">
+    `;
+
+    const totalCells = Math.ceil((lastDay.getDate() + (startDow === 0 ? 6 : startDow - 1)) / 7) * 7;
+
+    for (let i = 0; i < totalCells; i++) {
+      const d = addDays(gridStart, i);
+      const dStr = isoDate(d);
+      const inMonth = d.getMonth() === month;
+      const session = sessions[dStr];
+      const plan = getSessionTypeForDate(dStr);
+      const type = session?.type || plan?.type || 'descanso';
+      const colors = typeColors[type] || typeColors.descanso;
+      const isToday = dStr === isoDate(today);
+      const completed = session?.completed;
+
+      html += `
+        <a href="/day/?date=${dStr}" class="relative aspect-square flex flex-col items-center justify-center rounded-lg border transition-colors hover:border-[rgba(255,255,255,0.2)] p-1
+          ${isToday ? 'border-yellow/60' : 'border-[rgba(255,255,255,0.05)]'}
+          ${!inMonth ? 'opacity-25' : ''}
+        " style="background:${inMonth && session ? colors.bg : 'transparent'}">
+          <span class="text-xs ${isToday ? 'text-yellow font-bold' : 'text-primary'}">${d.getDate()}</span>
+          ${completed ? `<span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background:${colors.text}"></span>` : ''}
+        </a>
+      `;
+    }
+
+    html += '</div>';
+    document.getElementById('calendar-content')!.innerHTML = html;
+
+    document.getElementById('prev-btn')!.addEventListener('click', () => {
+      currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+      renderMonthView();
+    });
+    document.getElementById('next-btn')!.addEventListener('click', () => {
+      currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+      renderMonthView();
+    });
+  }
+
+  function setView(view: string) {
+    currentView = view;
+    document.querySelectorAll<HTMLElement>('.toggle-btn').forEach(btn => {
+      if (btn.dataset.view === view) {
+        btn.classList.add('bg-surface', 'text-primary');
+        btn.classList.remove('text-muted');
+      } else {
+        btn.classList.remove('bg-surface', 'text-primary');
+        btn.classList.add('text-muted');
+      }
+    });
+    if (view === 'week') renderWeekView();
+    else renderMonthView();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('view-toggle')!.addEventListener('click', (e: any) => {
+      const btn = e.target.closest('[data-view]') as HTMLElement | null;
+      if (btn) setView(btn.dataset.view!);
+    });
+    setView(currentView);
+  });
+</script>

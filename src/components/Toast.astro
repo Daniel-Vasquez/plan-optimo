@@ -1,0 +1,38 @@
+---
+---
+<div
+  id="toast-container"
+  class="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"
+></div>
+
+<script>
+  declare global {
+    interface Window {
+      showToast: (message: string, type?: string) => void;
+    }
+  }
+
+  window.showToast = function(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    const colorClass = type === 'success'
+      ? 'bg-surface2 border-green-500/40 text-green-400'
+      : 'bg-surface2 border-orange/40 text-orange';
+
+    toast.className = `${colorClass} border px-5 py-3 rounded-xl text-sm font-medium shadow-xl animate-slide-up pointer-events-auto flex items-center gap-2`;
+    toast.innerHTML = type === 'success'
+      ? `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>${message}`
+      : `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${message}`;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(8px)';
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  };
+</script>

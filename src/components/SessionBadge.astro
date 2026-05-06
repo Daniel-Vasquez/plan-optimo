@@ -1,0 +1,26 @@
+---
+export interface Props {
+  type: string;
+  size?: 'sm' | 'md' | 'lg';
+}
+const { type, size = 'md' } = Astro.props;
+
+const typeMap: Record<string, { label: string; colorClass: string; textClass: string }> = {
+  fuerza:    { label: 'FUERZA',    colorClass: 'bg-yellow/10 border-yellow/30',   textClass: 'text-yellow' },
+  cardio:    { label: 'CARDIO',    colorClass: 'bg-blue/10 border-blue/30',       textClass: 'text-blue' },
+  mixto:     { label: 'MIXTO',     colorClass: 'bg-orange/10 border-orange/30',   textClass: 'text-orange' },
+  descanso:  { label: 'DESCANSO',  colorClass: 'bg-muted/10 border-muted/30',     textClass: 'text-muted' },
+  voleibol:  { label: 'VOLEIBOL',  colorClass: 'bg-blue/10 border-blue/30',       textClass: 'text-blue' },
+};
+
+const info = typeMap[type] || typeMap['descanso'];
+
+const sizeClass = {
+  sm: 'text-[10px] px-2 py-0.5',
+  md: 'text-xs px-2.5 py-1',
+  lg: 'text-sm px-3 py-1.5',
+}[size];
+---
+<span class={`inline-flex items-center border rounded-full font-semibold tracking-wider ${sizeClass} ${info.colorClass} ${info.textClass}`}>
+  {info.label}
+</span>
