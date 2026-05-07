@@ -58,7 +58,9 @@ import Toast from '../../components/Toast.astro';
     // Try from path /day/YYYY-MM-DD
     const match = window.location.pathname.match(/(\d{4}-\d{2}-\d{2})/);
     if (match) return match[1];
-    return new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now.toISOString().slice(0, 10);
   }
 
   function debounce(fn, ms = 500) {
