@@ -21,7 +21,7 @@ import Toast from '../components/Toast.astro';
         <div id="hero-badge-row" class="flex items-center gap-2 mb-4 flex-wrap"></div>
         <div id="session-type-row" class="flex items-center gap-3 mb-5"></div>
         <a id="cta-btn" href="#"
-          class="inline-flex items-center gap-2 bg-yellow text-base font-bold px-5 py-3 rounded-xl hover:bg-yellow/90 active:scale-95 transition-all text-sm">
+          class="inline-flex items-center gap-2 bg-yellow text-ink font-bold px-5 py-3 rounded-xl hover:bg-yellow/90 active:scale-95 transition-all text-sm">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
           Registrar sesión de hoy
         </a>
@@ -153,7 +153,7 @@ import Toast from '../components/Toast.astro';
       { label: 'Agua hoy', value: waterToday !== null ? waterToday.toFixed(1) : '—', unit: waterToday !== null ? 'L' : '' },
     ];
     metricsGrid.innerHTML = metrics.map(m => `
-      <div class="bg-surface border border-[rgba(255,255,255,0.07)] rounded-xl p-4 flex flex-col gap-1">
+      <div class="bg-surface border border-border rounded-xl p-4 flex flex-col gap-1">
         <span class="text-xs text-muted uppercase tracking-wider">${m.label}</span>
         <div class="flex items-baseline gap-1 mt-1">
           <span class="text-2xl font-bold text-primary">${m.value}</span>
@@ -182,7 +182,7 @@ import Toast from '../components/Toast.astro';
       const dayNum = d.getDate();
       const dotColorMap = { fuerza:'bg-yellow', cardio:'bg-blue', mixto:'bg-orange', descanso:'bg-muted', voleibol:'bg-blue' };
       const dotColor = dotColorMap[sesh?.type || planDay?.type] || 'bg-muted2';
-      const borderClass = isToday ? 'border-2 border-yellow bg-yellow/5' : 'border border-[rgba(255,255,255,0.07)] bg-[#161920]';
+      const borderClass = isToday ? 'border-2 border-yellow bg-yellow/5' : 'border border-border bg-surface';
       const completedIcon = sesh?.completed
         ? `<svg class="w-3.5 h-3.5 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
         : `<span class="w-2 h-2 rounded-full ${dotColor}"></span>`;
@@ -201,7 +201,7 @@ import Toast from '../components/Toast.astro';
     const notesList = document.getElementById('notes-list')!;
     if (notes.length === 0) {
       notesList.innerHTML = `
-        <div class="bg-surface border border-[rgba(255,255,255,0.07)] rounded-xl p-6 text-center">
+        <div class="bg-surface border border-border rounded-xl p-6 text-center">
           <svg class="w-8 h-8 text-muted2 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
           <p class="text-sm text-muted">No hay notas aún.</p>
           <a href="/notes" class="text-xs text-yellow mt-1 inline-block hover:underline">Crear primera nota →</a>
@@ -212,7 +212,7 @@ import Toast from '../components/Toast.astro';
         const noteDate = new Intl.DateTimeFormat('es-MX', { month: 'short', day: 'numeric' }).format(new Date(n.date + 'T00:00:00'));
         const preview = (n.content || '').slice(0, 80) + ((n.content || '').length > 80 ? '…' : '');
         return `
-          <a href="/notes" class="block bg-surface border border-[rgba(255,255,255,0.07)] rounded-xl p-4 hover:border-[rgba(255,255,255,0.13)] transition-colors">
+          <a href="/notes" class="block bg-surface border border-border rounded-xl p-4 hover:border-border2 transition-colors">
             <div class="flex items-start justify-between gap-2">
               <h3 class="text-sm font-semibold text-primary truncate">${escapeHtml(n.title || 'Sin título')}</h3>
               <span class="text-[10px] text-muted2 flex-shrink-0">${noteDate}</span>

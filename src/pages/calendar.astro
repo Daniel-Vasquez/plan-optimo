@@ -85,8 +85,8 @@ import Toast from '../components/Toast.astro';
       const completed = session?.completed;
 
       html += `
-        <a href="/day/?date=${dStr}" class="flex flex-col items-center gap-1.5 p-2 lg:p-3 rounded-xl border transition-colors hover:border-[rgba(255,255,255,0.2)]
-          ${isToday ? 'border-yellow/50 bg-yellow/5' : 'border-[rgba(255,255,255,0.07)] bg-[#161920]'}">
+        <a href="/day/?date=${dStr}" class="flex flex-col items-center gap-1.5 p-2 lg:p-3 rounded-xl border transition-colors hover:border-[rgb(var(--edge)/0.2)]
+          ${isToday ? 'border-yellow/50 bg-yellow/5' : 'border-border bg-surface'}">
           <span class="text-[10px] uppercase tracking-wider text-muted">${dayNames[i]}</span>
           <span class="text-base lg:text-lg font-bold ${isToday ? 'text-yellow' : 'text-primary'}">${d.getDate()}</span>
           <span class="text-[9px] lg:text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style="background:${colors.bg};color:${colors.text}">${typeLabels[type]}</span>
@@ -157,8 +157,8 @@ import Toast from '../components/Toast.astro';
       const completed = session?.completed;
 
       html += `
-        <a href="/day/?date=${dStr}" class="relative aspect-square flex flex-col items-center justify-center rounded-lg border transition-colors hover:border-[rgba(255,255,255,0.2)] p-1
-          ${isToday ? 'border-yellow/60' : 'border-[rgba(255,255,255,0.05)]'}
+        <a href="/day/?date=${dStr}" class="relative aspect-square flex flex-col items-center justify-center rounded-lg border transition-colors hover:border-[rgb(var(--edge)/0.2)] p-1
+          ${isToday ? 'border-yellow/60' : 'border-[rgb(var(--edge)/0.05)]'}
           ${!inMonth ? 'opacity-25' : ''}
         " style="background:${inMonth && session ? colors.bg : 'transparent'}">
           <span class="text-xs ${isToday ? 'text-yellow font-bold' : 'text-primary'}">${d.getDate()}</span>

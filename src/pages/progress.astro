@@ -45,7 +45,7 @@ import Layout from '../layouts/Layout.astro';
 
   function chartCard(title, subtitle, canvasId, extra = '') {
     return `
-      <div class="bg-[#161920] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 lg:p-6">
+      <div class="bg-surface border border-border rounded-xl p-4 lg:p-6">
         <h2 class="text-sm font-semibold text-primary mb-0.5">${title}</h2>
         <p class="text-xs text-muted mb-4">${subtitle}</p>
         <div id="${canvasId}-wrapper"></div>
@@ -53,6 +53,12 @@ import Layout from '../layouts/Layout.astro';
       </div>
     `;
   }
+
+  function themeRGB(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  }
+  function themeColor(name) { return `rgb(${themeRGB('--color-' + name)})`; }
+  function edgeColor(alpha) { return `rgb(${themeRGB('--edge')} / ${alpha})`; }
 
   function buildChart(id, labels, values, color, invertY, fill, refLine) {
     if (!window.Chart) { setTimeout(() => buildChart(id, labels, values, color, invertY, fill, refLine), 200); return; }
@@ -76,7 +82,7 @@ import Layout from '../layouts/Layout.astro';
           const y = scales.y.getPixelForValue(refLine);
           c.save();
           c.setLineDash([4, 4]);
-          c.strokeStyle = 'rgba(255,255,255,0.2)';
+          c.strokeStyle = edgeColor(0.2);
           c.lineWidth = 1;
           c.beginPath();
           c.moveTo(chartArea.left, y);
@@ -111,14 +117,14 @@ import Layout from '../layouts/Layout.astro';
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: {
-            grid: { color: 'rgba(255,255,255,0.07)' },
-            ticks: { color: '#8890a8', font: { family: 'DM Sans', size: 11 }, maxTicksLimit: 8 }
+            grid: { color: edgeColor(0.07) },
+            ticks: { color: themeColor('muted'), font: { family: 'DM Sans', size: 11 }, maxTicksLimit: 8 }
           },
           y: {
             reverse: invertY,
-            grid: { color: 'rgba(255,255,255,0.07)' },
+            grid: { color: edgeColor(0.07) },
             ticks: {
-              color: '#8890a8',
+              color: themeColor('muted'),
               font: { family: 'DM Sans', size: 11 },
               callback: invertY
                 ? v => { const m = Math.floor(v/60); const s = Math.round(v%60).toString().padStart(2,'0'); return `${m}:${s}`; }
@@ -129,10 +135,10 @@ import Layout from '../layouts/Layout.astro';
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#1e2230',
-            titleColor: '#f0f2f8',
-            bodyColor: '#8890a8',
-            borderColor: 'rgba(255,255,255,0.13)',
+            backgroundColor: themeColor('surface2'),
+            titleColor: themeColor('primary'),
+            bodyColor: themeColor('muted'),
+            borderColor: edgeColor(0.13),
             borderWidth: 1,
             padding: 10,
             callbacks: invertY
@@ -165,7 +171,7 @@ import Layout from '../layouts/Layout.astro';
     const waterValues = waterHistory.map(h => h.water);
 
     const statsHtml = `
-      <div class="bg-[#161920] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 lg:p-6">
+      <div class="bg-surface border border-border rounded-xl p-4 lg:p-6">
         <h2 class="text-sm font-semibold text-primary mb-4">Estadísticas generales</h2>
         <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
           ${[

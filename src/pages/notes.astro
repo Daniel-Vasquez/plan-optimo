@@ -7,9 +7,9 @@ import Toast from '../components/Toast.astro';
   <div class="h-[calc(100vh-4rem)] lg:h-screen flex flex-col lg:flex-row overflow-hidden">
 
     <!-- List panel -->
-    <div id="notes-list-panel" class="lg:w-80 flex flex-col border-r border-[rgba(255,255,255,0.07)] bg-[#161920]">
+    <div id="notes-list-panel" class="lg:w-80 flex flex-col border-r border-border bg-surface">
       <!-- Header -->
-      <div class="p-4 border-b border-[rgba(255,255,255,0.07)]">
+      <div class="p-4 border-b border-border">
         <div class="flex items-center justify-between mb-3">
           <h1 class="font-display text-2xl text-primary">NOTAS</h1>
           <button id="new-note-btn" class="flex items-center gap-1.5 bg-yellow text-base text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-yellow/90 active:scale-95 transition-all">
@@ -18,7 +18,7 @@ import Toast from '../components/Toast.astro';
           </button>
         </div>
         <input id="search-input" type="text" placeholder="Buscar notas..."
-          class="w-full bg-[#1e2230] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 py-2 text-sm text-primary placeholder-muted2 focus:outline-none focus:border-[rgba(255,255,255,0.2)] transition-colors"
+          class="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-primary placeholder-muted2 focus:outline-none focus:border-[rgb(var(--edge)/0.2)] transition-colors"
         />
         <div id="tag-filters" class="flex flex-wrap gap-1.5 mt-2"></div>
       </div>
@@ -28,7 +28,7 @@ import Toast from '../components/Toast.astro';
     </div>
 
     <!-- Editor panel -->
-    <div id="notes-editor-panel" class="hidden lg:flex flex-1 flex-col bg-[#0d0f14]">
+    <div id="notes-editor-panel" class="hidden lg:flex flex-1 flex-col bg-base">
       <div id="editor-content" class="flex-1 flex items-center justify-center">
         <div class="text-center">
           <svg class="w-12 h-12 text-muted2 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -38,7 +38,7 @@ import Toast from '../components/Toast.astro';
     </div>
 
     <!-- Mobile editor overlay -->
-    <div id="mobile-editor" class="hidden fixed inset-0 z-50 bg-[#0d0f14] flex-col lg:hidden">
+    <div id="mobile-editor" class="hidden fixed inset-0 z-50 bg-base flex-col lg:hidden">
       <div id="mobile-editor-content" class="flex-1 flex flex-col"></div>
     </div>
 
@@ -52,12 +52,12 @@ import Toast from '../components/Toast.astro';
 
     <!-- Delete confirm modal -->
     <div id="delete-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm items-center justify-center p-4">
-      <div class="bg-[#1e2230] border border-[rgba(255,255,255,0.13)] rounded-2xl p-6 w-full max-w-sm">
+      <div class="bg-surface2 border border-border2 rounded-2xl p-6 w-full max-w-sm">
         <h3 class="text-base font-semibold text-primary mb-2">¿Eliminar nota?</h3>
         <p class="text-sm text-muted mb-5">Esta acción no se puede deshacer.</p>
         <div class="flex gap-3">
           <button id="confirm-delete" class="flex-1 bg-orange/80 hover:bg-orange text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">Eliminar</button>
-          <button id="cancel-delete" class="flex-1 bg-[#161920] hover:bg-[rgba(255,255,255,0.05)] text-primary py-2.5 rounded-lg text-sm transition-colors">Cancelar</button>
+          <button id="cancel-delete" class="flex-1 bg-surface hover:bg-[rgb(var(--edge)/0.05)] text-primary py-2.5 rounded-lg text-sm transition-colors">Cancelar</button>
         </div>
       </div>
     </div>
@@ -66,6 +66,10 @@ import Toast from '../components/Toast.astro';
 
 <script>
   import { getNotes, saveNote, deleteNote, searchNotes } from '../scripts/storage.js';
+
+  function themeColor(name: string) {
+    return `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--color-' + name).trim()})`;
+  }
 
   function escapeHtml(str: string) {
     return String(str)
@@ -117,7 +121,7 @@ import Toast from '../components/Toast.astro';
       const preview = (n.content || '').slice(0, 70) + ((n.content || '').length > 70 ? '…' : '');
       const active = n.id === currentNoteId;
       return `
-        <div class="note-item px-4 py-3 border-b border-[rgba(255,255,255,0.05)] cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.03)] ${active ? 'bg-[rgba(255,255,255,0.05)]' : ''}"
+        <div class="note-item px-4 py-3 border-b border-[rgb(var(--edge)/0.05)] cursor-pointer transition-colors hover:bg-[rgb(var(--edge)/0.03)] ${active ? 'bg-[rgb(var(--edge)/0.05)]' : ''}"
           data-id="${escapeHtml(n.id)}">
           <div class="flex items-start justify-between gap-2">
             <h3 class="text-sm font-semibold text-primary truncate">${escapeHtml(n.title || 'Sin título')}</h3>
@@ -138,7 +142,7 @@ import Toast from '../components/Toast.astro';
     const tags = getAllTags();
     const container = document.getElementById('tag-filters')!;
     container.innerHTML = tags.map(t => `
-      <button class="tag-filter text-[10px] px-2 py-0.5 rounded-full border transition-colors ${activeTag === t ? 'bg-yellow/20 border-yellow/40 text-yellow' : 'border-[rgba(255,255,255,0.1)] text-muted hover:border-[rgba(255,255,255,0.2)]'}"
+      <button class="tag-filter text-[10px] px-2 py-0.5 rounded-full border transition-colors ${activeTag === t ? 'bg-yellow/20 border-yellow/40 text-yellow' : 'border-[rgb(var(--edge)/0.1)] text-muted hover:border-[rgb(var(--edge)/0.2)]'}"
         data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>
     `).join('');
     container.querySelectorAll<HTMLElement>('.tag-filter').forEach(btn => {
@@ -152,7 +156,7 @@ import Toast from '../components/Toast.astro';
 
   function editorHtml(note) {
     return `
-      <div class="flex items-center justify-between px-4 pt-4 pb-2 border-b border-[rgba(255,255,255,0.07)]">
+      <div class="flex items-center justify-between px-4 pt-4 pb-2 border-b border-border">
         <button class="back-btn lg:hidden text-muted hover:text-primary transition-colors">
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
@@ -183,7 +187,7 @@ import Toast from '../components/Toast.astro';
             `).join('')}
           </div>
           <input id="tag-input" type="text" placeholder="Añadir tag + Enter"
-            class="w-full bg-[#1e2230] border border-[rgba(255,255,255,0.07)] rounded-lg px-3 py-2 text-sm text-primary placeholder-muted2 focus:outline-none focus:border-[rgba(255,255,255,0.2)] transition-colors"
+            class="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-primary placeholder-muted2 focus:outline-none focus:border-[rgb(var(--edge)/0.2)] transition-colors"
           />
         </div>
       </div>
@@ -228,7 +232,7 @@ import Toast from '../components/Toast.astro';
       const text = document.getElementById('autosave-text');
       if (status && dot && text) {
         dot.classList.add('animate-pulse');
-        dot.style.background = '#5a6278';
+        dot.style.background = themeColor('muted2');
         text.textContent = 'Guardando...';
         status.style.opacity = '1';
       }

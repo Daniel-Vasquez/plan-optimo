@@ -3,6 +3,41 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Dark theme (default) — RGB triplets for colors used with opacity modifiers */
+    --color-base: 13 15 20;
+    --color-surface: 22 25 32;
+    --color-surface2: 30 34 48;
+    --color-primary: 240 242 248;
+    --color-muted: 136 144 168;
+    --color-muted2: 90 98 120;
+    --color-yellow: 232 255 71;
+    --color-blue: 71 194 255;
+    --color-orange: 255 107 53;
+    --color-ink: 13 15 20;
+
+    /* Full color values (not used with opacity modifiers) */
+    --color-border: rgba(255, 255, 255, 0.07);
+    --color-border2: rgba(255, 255, 255, 0.13);
+
+    /* Base RGB for translucent overlays (white-on-dark in dark mode) */
+    --edge: 255 255 255;
+  }
+
+  :root.light {
+    --color-base: 241 243 248;
+    --color-surface: 255 255 255;
+    --color-surface2: 231 234 242;
+    --color-primary: 17 20 27;
+    --color-muted: 90 98 120;
+    --color-muted2: 136 144 168;
+
+    --color-border: rgba(13, 15, 20, 0.08);
+    --color-border2: rgba(13, 15, 20, 0.15);
+
+    --edge: 13 15 20;
+  }
+
   html {
     font-family: 'DM Sans', sans-serif;
   }
@@ -13,6 +48,16 @@
 }
 
 @layer utilities {
+  .theme-toggle-btn .icon-moon {
+    display: none;
+  }
+  :root.light .theme-toggle-btn .icon-sun {
+    display: none;
+  }
+  :root.light .theme-toggle-btn .icon-moon {
+    display: block;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
