@@ -164,8 +164,16 @@ export function getStreak() {
     const all = getAllSessions();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 10);
+
+    const cursor = new Date(today);
+    // If today isn't completed yet, start counting from yesterday so a
+    // prior streak isn't wiped out mid-day before the session is logged.
+    if (!all[todayStr]?.completed) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
     let streak = 0;
-    let cursor = new Date(today);
     for (let i = 0; i < 365; i++) {
       const dateStr = cursor.toISOString().slice(0, 10);
       const session = all[dateStr];
