@@ -2,18 +2,6 @@ const SESSIONS_KEY = 'trackfit_sessions';
 const NOTES_KEY = 'trackfit_notes';
 const CONFIG_KEY = 'trackfit_config';
 
-const SESSION_PLAN = {
-  1: { type: 'fuerza', label: 'Fuerza AM', exercises: ['Sentadilla goblet', 'P. muerto rumano', 'Zancadas', 'Hip thrust', 'Plancha frontal/lateral'] },
-  2: { type: 'cardio', label: 'Carrera AM', running: 'Intervalos 400m × 6–8 a 4:45–5:00 min/km' },
-  2.5: { type: 'fuerza', label: 'Fuerza PM', exercises: ['Press banca', 'Remo unilateral', 'Fondos', 'Curl bíceps'] },
-  3: { type: 'descanso', label: 'Descanso activo', notes: 'Movilidad, caminata opcional' },
-  4: { type: 'fuerza', label: 'Fuerza', exercises: ['Sentadilla sumo', 'Ext. cadera', 'Step-up', 'Abdominal bicicleta'] },
-  5: { type: 'cardio', label: 'Carrera AM', running: 'Tempo/Fartlek 3–4 km a 5:20–5:35 min/km' },
-  5.5: { type: 'fuerza', label: 'Fuerza PM', exercises: ['Press militar', 'Elev. laterales', 'Remo mentón', 'Ext. tríceps'] },
-  6: { type: 'voleibol', label: 'Voleibol', notes: '8am–12pm' },
-  0: { type: 'cardio', label: 'Carrera larga', running: 'Carrera larga 10–15 km a 6:30–6:50 min/km' },
-};
-
 // dayOfWeek: 0=Sunday, 1=Monday, ..., 6=Saturday
 const DAY_SESSION_MAP = {
   1: { type: 'fuerza', label: 'Fuerza', exercises: ['Sentadilla goblet', 'P. muerto rumano', 'Zancadas', 'Hip thrust', 'Plancha frontal/lateral'] },
@@ -151,14 +139,6 @@ export function getSessionTypeForDate(date) {
   } catch { return { type: 'descanso', label: 'Descanso' }; }
 }
 
-export function getPlanForDate(date) {
-  try {
-    const d = parseDate(date);
-    const dow = d.getDay();
-    return DAY_SESSION_MAP[dow] || { type: 'descanso', label: 'Descanso' };
-  } catch { return { type: 'descanso', label: 'Descanso' }; }
-}
-
 export function getStreak() {
   try {
     const all = getAllSessions();
@@ -204,8 +184,9 @@ export function getWeekCompletion() {
       const dateStr = d.toISOString().slice(0, 10);
       if (all[dateStr] && all[dateStr].completed) completed++;
     }
-    return { completed, total: 5 };
-  } catch { return { completed: 0, total: 5 }; }
+    const total = Object.values(DAY_SESSION_MAP).filter(d => d.type !== 'descanso').length;
+    return { completed, total };
+  } catch { return { completed: 0, total: 6 }; }
 }
 
 export function getBestPace() {

@@ -18,7 +18,7 @@ import Toast from '../components/Toast.astro';
 </Layout>
 
 <script>
-  import { getAllSessions, getSessionTypeForDate, getCurrentWeek } from '../scripts/storage.js';
+  import { getAllSessions, getSessionTypeForDate, getConfig } from '../scripts/storage.js';
 
   const typeColors = {
     fuerza:   { bg: 'rgba(232,255,71,0.15)',  text: '#e8ff47',  border: 'rgba(232,255,71,0.3)' },
@@ -49,7 +49,14 @@ import Toast from '../components/Toast.astro';
     const today = new Date(); today.setHours(0,0,0,0);
     const monday = getMondayOfWeek(currentDate);
 
-    const weekNum = getCurrentWeek();
+    const config = getConfig();
+    let weekNum = 1;
+    if (config?.startDate) {
+      const start = new Date(config.startDate + 'T00:00:00');
+      start.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((monday.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      weekNum = Math.max(1, Math.min(16, Math.floor(diffDays / 7) + 1));
+    }
     const dayNames = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
 
     let html = `

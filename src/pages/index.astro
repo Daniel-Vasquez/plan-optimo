@@ -83,6 +83,7 @@ import Toast from '../components/Toast.astro';
     content.classList.remove('hidden');
 
     const today = new Date();
+    const hour = today.getHours();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().slice(0, 10);
     const week = getCurrentWeek();
@@ -90,7 +91,6 @@ import Toast from '../components/Toast.astro';
     const todaySession = getSession(todayStr);
 
     // Greeting
-    const hour = today.getHours();
     const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
     document.getElementById('hero-greeting')!.textContent = `${greeting}, ${config.name}`;
 

@@ -2,6 +2,9 @@
 import Layout from '../layouts/Layout.astro';
 ---
 <Layout title="Progreso" currentPage="progress">
+  <Fragment slot="head">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  </Fragment>
   <div class="px-4 py-6 lg:px-8 lg:py-8 max-w-4xl mx-auto space-y-6" id="progress-root">
     <h1 class="font-display text-3xl text-primary">PROGRESO</h1>
     <div id="progress-content" class="space-y-6"></div>
