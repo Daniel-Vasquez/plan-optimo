@@ -122,7 +122,7 @@ import Layout from '../layouts/Layout.astro';
               font: { family: 'DM Sans', size: 11 },
               callback: invertY
                 ? v => { const m = Math.floor(v/60); const s = Math.round(v%60).toString().padStart(2,'0'); return `${m}:${s}`; }
-                : undefined
+                : v => +parseFloat(v).toFixed(2)
             }
           }
         },
@@ -137,7 +137,7 @@ import Layout from '../layouts/Layout.astro';
             padding: 10,
             callbacks: invertY
               ? { label: ctx => { const v = ctx.raw; const m = Math.floor(v/60); const s = Math.round(v%60).toString().padStart(2,'0'); return ` ${m}:${s} min/km`; } }
-              : {}
+              : { label: ctx => ` ${+parseFloat(ctx.raw).toFixed(2)}` }
           }
         }
       }
