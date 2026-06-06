@@ -120,6 +120,12 @@ import Toast from '../components/Toast.astro';
     (document.getElementById('cta-btn') as HTMLAnchorElement).href = `/day/?date=${todayStr}`;
 
     // Week bar
+    const planStart = new Date(config.startDate + 'T00:00:00');
+    planStart.setHours(0, 0, 0, 0);
+    const daysElapsed = Math.floor((today.getTime() - planStart.getTime()) / (1000 * 60 * 60 * 24));
+    const daysRemaining = Math.max(0, 16 * 7 - daysElapsed);
+    const daysLabel = daysRemaining === 0 ? '¡Plan completado!' : `${daysRemaining} días restantes`;
+
     document.getElementById('week-bar-wrapper')!.innerHTML = `
       <div class="space-y-1.5">
         <div class="flex items-center justify-between text-xs">
@@ -129,6 +135,7 @@ import Toast from '../components/Toast.astro';
         <div class="h-1.5 bg-surface2 rounded-full overflow-hidden">
           <div class="h-full bg-yellow rounded-full transition-all duration-500" style="width:${Math.round(week/16*100)}%"></div>
         </div>
+        <div class="text-[11px] text-muted2 text-right">${daysLabel}</div>
       </div>
     `;
 

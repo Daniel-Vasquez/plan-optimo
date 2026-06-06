@@ -1,0 +1,112 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Toast from '../components/Toast.astro';
+---
+<Layout title="Ajustes" currentPage="settings">
+  <Toast />
+  <div class="px-4 py-6 lg:px-8 lg:py-8 max-w-2xl mx-auto space-y-6">
+    <h1 class="font-display text-3xl text-primary">AJUSTES</h1>
+
+    <!-- Perfil -->
+    <div class="bg-surface border border-border2 rounded-xl p-6 space-y-4">
+      <h2 class="text-sm font-semibold text-primary">Tu perfil</h2>
+      <div>
+        <label class="block text-xs text-muted uppercase tracking-wider mb-1.5">Nombre</label>
+        <input
+          id="settings-name"
+          type="text"
+          placeholder="Tu nombre"
+          class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder-muted2 focus:outline-none focus:border-yellow transition-colors"
+        />
+      </div>
+      <div>
+        <label class="block text-xs text-muted uppercase tracking-wider mb-1.5">Fecha de inicio del plan</label>
+        <input
+          id="settings-date"
+          type="date"
+          class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-yellow transition-colors"
+        />
+      </div>
+      <p id="settings-error" class="text-orange text-sm hidden"></p>
+      <button
+        id="settings-save"
+        class="w-full bg-yellow text-base font-bold py-3 rounded-lg hover:bg-yellow/90 active:scale-95 transition-all"
+      >
+        Guardar cambios
+      </button>
+    </div>
+
+    <!-- Estado del plan -->
+    <div id="plan-info" class="hidden bg-surface border border-border2 rounded-xl p-6 space-y-4">
+      <h2 class="text-sm font-semibold text-primary">Estado del plan</h2>
+      <div class="grid grid-cols-2 gap-4" id="plan-stats"></div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { getConfig, saveConfig } from '../scripts/storage.js';
+
+  function renderPlanInfo(config) {
+    const planInfo = document.getElementById('plan-info')!;
+    const planStats = document.getElementById('plan-stats')!;
+
+    const start = new Date(config.startDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const week = Math.max(1, Math.min(16, Math.floor(diffDays / 7) + 1));
+    const daysRemaining = Math.max(0, 16 * 7 - diffDays);
+
+    const fmt = (d: Date) => new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+    const endDate = new Date(start);
+    endDate.setDate(endDate.getDate() + 16 * 7);
+
+    planStats.innerHTML = [
+      { label: 'Semana actual',   value: `${week} de 16` },
+      { label: 'Días restantes',  value: daysRemaining > 0 ? daysRemaining.toString() : '¡Completado!' },
+      { label: 'Inicio del plan', value: fmt(start) },
+      { label: 'Fin estimado',    value: fmt(endDate) },
+    ].map(s => `
+      <div>
+        <p class="text-xs text-muted uppercase tracking-wider mb-1">${s.label}</p>
+        <p class="text-base font-semibold text-primary">${s.value}</p>
+      </div>
+    `).join('');
+
+    planInfo.classList.remove('hidden');
+  }
+
+  function init() {
+    const config = getConfig();
+    if (config) {
+      (document.getElementById('settings-name') as HTMLInputElement).value = config.name || '';
+      (document.getElementById('settings-date') as HTMLInputElement).value = config.startDate || '';
+      renderPlanInfo(config);
+    }
+
+    document.getElementById('settings-save')!.addEventListener('click', () => {
+      const name = (document.getElementById('settings-name') as HTMLInputElement).value.trim();
+      const startDate = (document.getElementById('settings-date') as HTMLInputElement).value;
+      const errorEl = document.getElementById('settings-error')!;
+
+      if (!name) {
+        errorEl.textContent = 'Por favor ingresa tu nombre.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      if (!startDate) {
+        errorEl.textContent = 'Por favor selecciona una fecha de inicio.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      errorEl.classList.add('hidden');
+      saveConfig({ name, startDate });
+      renderPlanInfo({ name, startDate });
+      if (window.showToast) window.showToast('Ajustes guardados correctamente');
+    });
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
