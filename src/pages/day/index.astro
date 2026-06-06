@@ -16,6 +16,12 @@ import Toast from '../../components/Toast.astro';
     getSession, saveSession, getSessionTypeForDate, getCurrentWeek, getConfig
   } from '../../scripts/storage.js';
 
+  declare global {
+    interface Window {
+      showToast?: (message: string, type?: string) => void;
+    }
+  }
+
   const SESSION_PLAN = {
     1: { type: 'fuerza', label: 'Fuerza', exercises: ['Sentadilla goblet', 'P. muerto rumano', 'Zancadas', 'Hip thrust', 'Plancha frontal/lateral'] },
     2: { type: 'mixto', label: 'Carrera + Fuerza', morning: 'Intervalos 400m × 6–8 a 4:45–5:00 min/km', exercises: ['Press banca', 'Remo unilateral', 'Fondos', 'Curl bíceps'] },

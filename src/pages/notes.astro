@@ -1,23 +1,45 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Toast from '../components/Toast.astro';
+import Layout from "../layouts/Layout.astro";
+import Toast from "../components/Toast.astro";
 ---
+
 <Layout title="Notas" currentPage="notes">
   <Toast />
-  <div class="h-[calc(100vh-4rem)] lg:h-screen flex flex-col lg:flex-row overflow-hidden">
-
+  <div
+    class="h-[calc(100vh-4rem)] lg:h-screen flex flex-col lg:flex-row overflow-hidden"
+  >
     <!-- List panel -->
-    <div id="notes-list-panel" class="lg:w-80 flex flex-col border-r border-border bg-surface">
+    <div
+      id="notes-list-panel"
+      class="lg:w-80 flex flex-col border-r border-border bg-surface"
+    >
       <!-- Header -->
       <div class="p-4 border-b border-border">
         <div class="flex items-center justify-between mb-3">
           <h1 class="font-display text-2xl text-primary">NOTAS</h1>
-          <button id="new-note-btn" class="flex items-center gap-1.5 bg-yellow text-base text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-yellow/90 active:scale-95 transition-all">
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <button
+            id="new-note-btn"
+            class="flex items-center gap-1.5 bg-blue text-base text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-yellow/90 active:scale-95 transition-all"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              ><line x1="12" y1="5" x2="12" y2="19"></line><line
+                x1="5"
+                y1="12"
+                x2="19"
+                y2="12"></line></svg
+            >
             Nueva
           </button>
         </div>
-        <input id="search-input" type="text" placeholder="Buscar notas..."
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Buscar notas..."
           class="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-primary placeholder-muted2 focus:outline-none focus:border-[rgb(var(--edge)/0.2)] transition-colors"
         />
         <div id="tag-filters" class="flex flex-wrap gap-1.5 mt-2"></div>
@@ -31,33 +53,67 @@ import Toast from '../components/Toast.astro';
     <div id="notes-editor-panel" class="hidden lg:flex flex-1 flex-col bg-base">
       <div id="editor-content" class="flex-1 flex items-center justify-center">
         <div class="text-center">
-          <svg class="w-12 h-12 text-muted2 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <svg
+            class="w-12 h-12 text-muted2 mx-auto mb-3"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+            ><path
+              d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+            ></path><polyline points="14 2 14 8 20 8"></polyline></svg
+          >
           <p class="text-sm text-muted">Selecciona una nota o crea una nueva</p>
         </div>
       </div>
     </div>
 
     <!-- Mobile editor overlay -->
-    <div id="mobile-editor" class="hidden fixed inset-0 z-50 bg-base flex-col lg:hidden">
+    <div
+      id="mobile-editor"
+      class="hidden fixed inset-0 z-50 bg-base flex-col lg:hidden"
+    >
       <div id="mobile-editor-content" class="flex-1 flex flex-col"></div>
     </div>
 
     <!-- Autosave status pill -->
-    <div id="autosave-status" class="fixed bottom-20 lg:bottom-4 left-1/2 -translate-x-1/2 z-40 pointer-events-none opacity-0 transition-opacity duration-200">
-      <div class="bg-surface2 border border-border2 text-muted2 text-xs px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2">
-        <span id="autosave-dot" class="w-1.5 h-1.5 rounded-full bg-muted2 animate-pulse"></span>
+    <div
+      id="autosave-status"
+      class="fixed bottom-20 lg:bottom-4 left-1/2 -translate-x-1/2 z-40 pointer-events-none opacity-0 transition-opacity duration-200"
+    >
+      <div
+        class="bg-surface2 border border-border2 text-muted2 text-xs px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2"
+      >
+        <span
+          id="autosave-dot"
+          class="w-1.5 h-1.5 rounded-full bg-muted2 animate-pulse"></span>
         <span id="autosave-text">Guardando...</span>
       </div>
     </div>
 
     <!-- Delete confirm modal -->
-    <div id="delete-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm items-center justify-center p-4">
-      <div class="bg-surface2 border border-border2 rounded-2xl p-6 w-full max-w-sm">
-        <h3 class="text-base font-semibold text-primary mb-2">¿Eliminar nota?</h3>
+    <div
+      id="delete-modal"
+      class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm items-center justify-center p-4"
+    >
+      <div
+        class="bg-surface2 border border-border2 rounded-2xl p-6 w-full max-w-sm"
+      >
+        <h3 class="text-base font-semibold text-primary mb-2">
+          ¿Eliminar nota?
+        </h3>
         <p class="text-sm text-muted mb-5">Esta acción no se puede deshacer.</p>
         <div class="flex gap-3">
-          <button id="confirm-delete" class="flex-1 bg-orange/80 hover:bg-orange text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">Eliminar</button>
-          <button id="cancel-delete" class="flex-1 bg-surface hover:bg-[rgb(var(--edge)/0.05)] text-primary py-2.5 rounded-lg text-sm transition-colors">Cancelar</button>
+          <button
+            id="confirm-delete"
+            class="flex-1 bg-orange/80 hover:bg-orange text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
+            >Eliminar</button
+          >
+          <button
+            id="cancel-delete"
+            class="flex-1 bg-surface hover:bg-[rgb(var(--edge)/0.05)] text-primary py-2.5 rounded-lg text-sm transition-colors"
+            >Cancelar</button
+          >
         </div>
       </div>
     </div>
@@ -65,47 +121,65 @@ import Toast from '../components/Toast.astro';
 </Layout>
 
 <script>
-  import { getNotes, saveNote, deleteNote, searchNotes } from '../scripts/storage.js';
+  import {
+    getNotes,
+    saveNote,
+    deleteNote,
+    searchNotes,
+  } from "../scripts/storage.js";
+
+  declare global {
+    interface Window {
+      showToast?: (message: string, type?: string) => void;
+    }
+  }
 
   function themeColor(name: string) {
-    return `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--color-' + name).trim()})`;
+    return `rgb(${getComputedStyle(document.documentElement)
+      .getPropertyValue("--color-" + name)
+      .trim()})`;
   }
 
   function escapeHtml(str: string) {
     return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   let currentNoteId = null;
   let allNotes: any[] = [];
   let autosaveTimer: number | undefined = undefined;
   let pendingDeleteId = null;
-  let searchQuery = '';
-  let activeTag = '';
+  let searchQuery = "";
+  let activeTag = "";
 
-  function getAllTags() {
-    const tags = new Set();
-    getNotes().forEach(n => (n.tags || []).forEach(t => tags.add(t)));
+  function getAllTags(): string[] {
+    const tags = new Set<string>();
+    getNotes().forEach((n) => (n.tags || []).forEach((t) => tags.add(t)));
     return [...tags];
   }
 
   function relativeTime(dateStr: string) {
-    const d = new Date(dateStr + 'T00:00:00');
+    const d = new Date(dateStr + "T00:00:00");
     const now = new Date();
-    const diff = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-    if (diff === 0) return 'Hoy';
-    if (diff === 1) return 'Ayer';
+    const diff = Math.floor(
+      (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    if (diff === 0) return "Hoy";
+    if (diff === 1) return "Ayer";
     if (diff < 7) return `Hace ${diff} días`;
-    return new Intl.DateTimeFormat('es-MX', { month: 'short', day: 'numeric' }).format(d);
+    return new Intl.DateTimeFormat("es-MX", {
+      month: "short",
+      day: "numeric",
+    }).format(d);
   }
 
   function renderList() {
     allNotes = searchNotes(searchQuery, activeTag);
-    const list = document.getElementById('notes-list')!;
+    const list = document.getElementById("notes-list")!;
 
     if (!allNotes.length) {
       list.innerHTML = `
@@ -117,37 +191,45 @@ import Toast from '../components/Toast.astro';
       return;
     }
 
-    list.innerHTML = allNotes.map(n => {
-      const preview = (n.content || '').slice(0, 70) + ((n.content || '').length > 70 ? '…' : '');
-      const active = n.id === currentNoteId;
-      return `
-        <div class="note-item px-4 py-3 border-b border-[rgb(var(--edge)/0.05)] cursor-pointer transition-colors hover:bg-[rgb(var(--edge)/0.03)] ${active ? 'bg-[rgb(var(--edge)/0.05)]' : ''}"
+    list.innerHTML = allNotes
+      .map((n) => {
+        const preview =
+          (n.content || "").slice(0, 70) +
+          ((n.content || "").length > 70 ? "…" : "");
+        const active = n.id === currentNoteId;
+        return `
+        <div class="note-item px-4 py-3 border-b border-[rgb(var(--edge)/0.05)] cursor-pointer transition-colors hover:bg-[rgb(var(--edge)/0.03)] ${active ? "bg-[rgb(var(--edge)/0.05)]" : ""}"
           data-id="${escapeHtml(n.id)}">
           <div class="flex items-start justify-between gap-2">
-            <h3 class="text-sm font-semibold text-primary truncate">${escapeHtml(n.title || 'Sin título')}</h3>
+            <h3 class="text-sm font-semibold text-primary truncate">${escapeHtml(n.title || "Sin título")}</h3>
             <span class="text-[10px] text-muted2 flex-shrink-0 mt-0.5">${relativeTime(n.date)}</span>
           </div>
-          ${preview ? `<p class="text-xs text-muted mt-0.5 line-clamp-2">${escapeHtml(preview)}</p>` : ''}
-          ${n.tags?.length ? `<div class="flex flex-wrap gap-1 mt-1.5">${n.tags.map(t => `<span class="text-[9px] px-1.5 py-0.5 bg-surface2 text-muted rounded-full">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+          ${preview ? `<p class="text-xs text-muted mt-0.5 line-clamp-2">${escapeHtml(preview)}</p>` : ""}
+          ${n.tags?.length ? `<div class="flex flex-wrap gap-1 mt-1.5">${n.tags.map((t) => `<span class="text-[9px] px-1.5 py-0.5 bg-surface2 text-muted rounded-full">${escapeHtml(t)}</span>`).join("")}</div>` : ""}
         </div>
       `;
-    }).join('');
+      })
+      .join("");
 
-    list.querySelectorAll<HTMLElement>('.note-item').forEach(el => {
-      el.addEventListener('click', () => openNote(el.dataset.id));
+    list.querySelectorAll<HTMLElement>(".note-item").forEach((el) => {
+      el.addEventListener("click", () => openNote(el.dataset.id));
     });
   }
 
   function renderTagFilters() {
     const tags = getAllTags();
-    const container = document.getElementById('tag-filters')!;
-    container.innerHTML = tags.map(t => `
-      <button class="tag-filter text-[10px] px-2 py-0.5 rounded-full border transition-colors ${activeTag === t ? 'bg-yellow/20 border-yellow/40 text-yellow' : 'border-[rgb(var(--edge)/0.1)] text-muted hover:border-[rgb(var(--edge)/0.2)]'}"
+    const container = document.getElementById("tag-filters")!;
+    container.innerHTML = tags
+      .map(
+        (t) => `
+      <button class="tag-filter text-[10px] px-2 py-0.5 rounded-full border transition-colors ${activeTag === t ? "bg-yellow/20 border-yellow/40 text-yellow" : "border-[rgb(var(--edge)/0.1)] text-muted hover:border-[rgb(var(--edge)/0.2)]"}"
         data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>
-    `).join('');
-    container.querySelectorAll<HTMLElement>('.tag-filter').forEach(btn => {
-      btn.addEventListener('click', () => {
-        activeTag = activeTag === btn.dataset.tag ? '' : btn.dataset.tag || '';
+    `,
+      )
+      .join("");
+    container.querySelectorAll<HTMLElement>(".tag-filter").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeTag = activeTag === btn.dataset.tag ? "" : btn.dataset.tag || "";
         renderTagFilters();
         renderList();
       });
@@ -167,24 +249,28 @@ import Toast from '../components/Toast.astro';
         </div>
       </div>
       <div class="flex-1 overflow-y-auto px-4 lg:px-8 py-4 flex flex-col gap-4">
-        <input id="note-title" type="text" value="${escapeHtml(note.title || '')}"
+        <input id="note-title" type="text" value="${escapeHtml(note.title || "")}"
           placeholder="Título de la nota"
           class="w-full bg-transparent text-xl font-semibold text-primary placeholder-muted2 focus:outline-none border-none"
         />
-        <p class="text-xs text-muted2">${new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(new Date(note.date + 'T00:00:00'))}</p>
+        <p class="text-xs text-muted2">${new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" }).format(new Date(note.date + "T00:00:00"))}</p>
         <textarea id="note-content"
           placeholder="Escribe tu nota aquí..."
           class="flex-1 w-full bg-transparent text-sm text-primary placeholder-muted2 focus:outline-none resize-none font-mono min-h-[200px]"
-        >${escapeHtml(note.content || '')}</textarea>
+        >${escapeHtml(note.content || "")}</textarea>
         <div>
           <label class="text-xs text-muted uppercase tracking-wider block mb-2">Tags</label>
           <div class="flex flex-wrap gap-1.5 mb-2" id="tag-chips">
-            ${(note.tags || []).map(t => `
+            ${(note.tags || [])
+              .map(
+                (t) => `
               <span class="tag-chip flex items-center gap-1 text-xs px-2.5 py-1 bg-surface2 text-muted rounded-full" data-tag="${escapeHtml(t)}">
                 ${escapeHtml(t)}
                 <button class="remove-tag hover:text-primary transition-colors" data-tag="${escapeHtml(t)}">×</button>
               </span>
-            `).join('')}
+            `,
+              )
+              .join("")}
           </div>
           <input id="tag-input" type="text" placeholder="Añadir tag + Enter"
             class="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-primary placeholder-muted2 focus:outline-none focus:border-[rgb(var(--edge)/0.2)] transition-colors"
@@ -195,20 +281,20 @@ import Toast from '../components/Toast.astro';
   }
 
   function openNote(id) {
-    const note = getNotes().find(n => n.id === id);
+    const note = getNotes().find((n) => n.id === id);
     if (!note) return;
     currentNoteId = id;
 
     const isMobile = window.innerWidth < 1024;
     const targetEl = isMobile
-      ? document.getElementById('mobile-editor-content')!
-      : document.getElementById('editor-content')!;
-    const mobileEditor = document.getElementById('mobile-editor')!;
+      ? document.getElementById("mobile-editor-content")!
+      : document.getElementById("editor-content")!;
+    const mobileEditor = document.getElementById("mobile-editor")!;
 
     if (isMobile) {
-      mobileEditor.classList.remove('hidden');
-      mobileEditor.classList.add('flex');
-      document.getElementById('notes-list-panel')!.classList.add('hidden');
+      mobileEditor.classList.remove("hidden");
+      mobileEditor.classList.add("flex");
+      document.getElementById("notes-list-panel")!.classList.add("hidden");
     }
 
     targetEl.innerHTML = editorHtml(note);
@@ -219,84 +305,98 @@ import Toast from '../components/Toast.astro';
   function wireEditor(note) {
     const isMobile = window.innerWidth < 1024;
 
-    document.querySelector('.back-btn')?.addEventListener('click', () => {
-      document.getElementById('mobile-editor')!.classList.add('hidden');
-      document.getElementById('mobile-editor')!.classList.remove('flex');
-      document.getElementById('notes-list-panel')!.classList.remove('hidden');
+    document.querySelector(".back-btn")?.addEventListener("click", () => {
+      document.getElementById("mobile-editor")!.classList.add("hidden");
+      document.getElementById("mobile-editor")!.classList.remove("flex");
+      document.getElementById("notes-list-panel")!.classList.remove("hidden");
       currentNoteId = null;
     });
 
     const triggerSave = () => {
-      const status = document.getElementById('autosave-status');
-      const dot = document.getElementById('autosave-dot');
-      const text = document.getElementById('autosave-text');
+      const status = document.getElementById("autosave-status");
+      const dot = document.getElementById("autosave-dot");
+      const text = document.getElementById("autosave-text");
       if (status && dot && text) {
-        dot.classList.add('animate-pulse');
-        dot.style.background = themeColor('muted2');
-        text.textContent = 'Guardando...';
-        status.style.opacity = '1';
+        dot.classList.add("animate-pulse");
+        dot.style.background = themeColor("muted2");
+        text.textContent = "Guardando...";
+        status.style.opacity = "1";
       }
       clearTimeout(autosaveTimer);
       autosaveTimer = setTimeout(() => {
         doSave();
         if (status && dot && text) {
-          dot.classList.remove('animate-pulse');
-          dot.style.background = '#4ade80';
-          text.textContent = 'Guardado';
-          setTimeout(() => { status.style.opacity = '0'; }, 2000);
+          dot.classList.remove("animate-pulse");
+          dot.style.background = "#4ade80";
+          text.textContent = "Guardado";
+          setTimeout(() => {
+            status.style.opacity = "0";
+          }, 2000);
         }
       }, 500);
     };
 
-    document.getElementById('note-title')?.addEventListener('input', triggerSave);
-    document.getElementById('note-content')?.addEventListener('input', triggerSave);
+    document
+      .getElementById("note-title")
+      ?.addEventListener("input", triggerSave);
+    document
+      .getElementById("note-content")
+      ?.addEventListener("input", triggerSave);
 
-    document.getElementById('tag-input')?.addEventListener('keydown', (e: any) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const val = e.target.value.trim();
-        if (!val) return;
-        const current = getNotes().find(n => n.id === currentNoteId);
-        if (!current) return;
-        const tags = [...(current.tags || [])];
-        if (!tags.includes(val)) {
-          tags.push(val);
-          saveNote({ ...current, tags });
-        }
-        e.target.value = '';
-        const updatedNote = getNotes().find(n => n.id === currentNoteId);
-        if (updatedNote) {
-          const chips = document.getElementById('tag-chips')!;
-          chips.innerHTML = updatedNote.tags.map(t => `
+    document
+      .getElementById("tag-input")
+      ?.addEventListener("keydown", (e: any) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const val = e.target.value.trim();
+          if (!val) return;
+          const current = getNotes().find((n) => n.id === currentNoteId);
+          if (!current) return;
+          const tags = [...(current.tags || [])];
+          if (!tags.includes(val)) {
+            tags.push(val);
+            saveNote({ ...current, tags });
+          }
+          e.target.value = "";
+          const updatedNote = getNotes().find((n) => n.id === currentNoteId);
+          if (updatedNote) {
+            const chips = document.getElementById("tag-chips")!;
+            chips.innerHTML = updatedNote.tags
+              .map(
+                (t) => `
             <span class="tag-chip flex items-center gap-1 text-xs px-2.5 py-1 bg-surface2 text-muted rounded-full" data-tag="${escapeHtml(t)}">
               ${escapeHtml(t)}
               <button class="remove-tag hover:text-primary transition-colors" data-tag="${escapeHtml(t)}">×</button>
             </span>
-          `).join('');
-          wireRemoveTags();
+          `,
+              )
+              .join("");
+            wireRemoveTags();
+          }
+          renderTagFilters();
+          renderList();
         }
-        renderTagFilters();
-        renderList();
-      }
-    });
+      });
 
     wireRemoveTags();
 
-    document.getElementById('delete-note-btn')?.addEventListener('click', () => {
-      pendingDeleteId = currentNoteId;
-      document.getElementById('delete-modal')!.classList.remove('hidden');
-      document.getElementById('delete-modal')!.classList.add('flex');
-    });
+    document
+      .getElementById("delete-note-btn")
+      ?.addEventListener("click", () => {
+        pendingDeleteId = currentNoteId;
+        document.getElementById("delete-modal")!.classList.remove("hidden");
+        document.getElementById("delete-modal")!.classList.add("flex");
+      });
   }
 
   function wireRemoveTags() {
-    document.querySelectorAll<HTMLElement>('.remove-tag').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tag = btn.dataset.tag || '';
-        const note = getNotes().find(n => n.id === currentNoteId);
+    document.querySelectorAll<HTMLElement>(".remove-tag").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tag = btn.dataset.tag || "";
+        const note = getNotes().find((n) => n.id === currentNoteId);
         if (!note) return;
-        saveNote({ ...note, tags: (note.tags || []).filter(t => t !== tag) });
-        btn.closest('.tag-chip')!.remove();
+        saveNote({ ...note, tags: (note.tags || []).filter((t) => t !== tag) });
+        btn.closest(".tag-chip")!.remove();
         renderTagFilters();
         renderList();
       });
@@ -304,20 +404,24 @@ import Toast from '../components/Toast.astro';
   }
 
   function doSave() {
-    const note = getNotes().find(n => n.id === currentNoteId);
+    const note = getNotes().find((n) => n.id === currentNoteId);
     if (!note) return;
-    const title = (document.getElementById('note-title') as HTMLInputElement | null)?.value || '';
-    const content = (document.getElementById('note-content') as HTMLTextAreaElement | null)?.value || '';
+    const title =
+      (document.getElementById("note-title") as HTMLInputElement | null)
+        ?.value || "";
+    const content =
+      (document.getElementById("note-content") as HTMLTextAreaElement | null)
+        ?.value || "";
     saveNote({ ...note, title, content });
     renderList();
   }
 
   function createNewNote() {
     const note = {
-      id: '',
+      id: "",
       date: new Date().toISOString().slice(0, 10),
-      title: '',
-      content: '',
+      title: "",
+      content: "",
       tags: [],
     };
     saveNote(note);
@@ -326,45 +430,51 @@ import Toast from '../components/Toast.astro';
     renderTagFilters();
   }
 
-  document.addEventListener('astro:page-load', () => {
+  document.addEventListener("astro:page-load", () => {
     renderTagFilters();
     renderList();
 
-    document.getElementById('new-note-btn')!.addEventListener('click', createNewNote);
+    document
+      .getElementById("new-note-btn")!
+      .addEventListener("click", createNewNote);
 
-    document.getElementById('search-input')!.addEventListener('input', (e: any) => {
-      searchQuery = e.target.value;
-      renderList();
-    });
+    document
+      .getElementById("search-input")!
+      .addEventListener("input", (e: any) => {
+        searchQuery = e.target.value;
+        renderList();
+      });
 
-    document.getElementById('confirm-delete')!.addEventListener('click', () => {
+    document.getElementById("confirm-delete")!.addEventListener("click", () => {
       if (pendingDeleteId) {
         deleteNote(pendingDeleteId);
         if (pendingDeleteId === currentNoteId) {
           currentNoteId = null;
-          document.getElementById('editor-content')!.innerHTML = `
+          document.getElementById("editor-content")!.innerHTML = `
             <div class="text-center">
               <p class="text-sm text-muted">Selecciona una nota o crea una nueva</p>
             </div>
           `;
-          const mobile = document.getElementById('mobile-editor')!;
-          mobile.classList.add('hidden');
-          mobile.classList.remove('flex');
-          document.getElementById('notes-list-panel')!.classList.remove('hidden');
+          const mobile = document.getElementById("mobile-editor")!;
+          mobile.classList.add("hidden");
+          mobile.classList.remove("flex");
+          document
+            .getElementById("notes-list-panel")!
+            .classList.remove("hidden");
         }
         pendingDeleteId = null;
         renderTagFilters();
         renderList();
-        if (window.showToast) window.showToast('Nota eliminada');
+        if (window.showToast) window.showToast("Nota eliminada");
       }
-      document.getElementById('delete-modal')!.classList.add('hidden');
-      document.getElementById('delete-modal')!.classList.remove('flex');
+      document.getElementById("delete-modal")!.classList.add("hidden");
+      document.getElementById("delete-modal")!.classList.remove("flex");
     });
 
-    document.getElementById('cancel-delete')!.addEventListener('click', () => {
+    document.getElementById("cancel-delete")!.addEventListener("click", () => {
       pendingDeleteId = null;
-      document.getElementById('delete-modal')!.classList.add('hidden');
-      document.getElementById('delete-modal')!.classList.remove('flex');
+      document.getElementById("delete-modal")!.classList.add("hidden");
+      document.getElementById("delete-modal")!.classList.remove("flex");
     });
   });
 </script>

@@ -1,81 +1,151 @@
-<!DOCTYPE html><html lang="es" class="bg-base text-primary font-body"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>Dashboard · TrackFit</title><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#0d0f14"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="TrackFit"><link rel="apple-touch-icon" href="/icon-192.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"><meta name="astro-view-transitions-enabled" content="true"><meta name="astro-view-transitions-fallback" content="animate"><link rel="stylesheet" href="/_astro/calendar.DE4aO4dp.css"><script type="module" src="/_astro/hoisted.Ddu1NnkX.js"></script>
-<script type="module" src="/_astro/page.D2RhrP0O.js"></script></head> <body class="bg-base min-h-screen font-body" x-data="onboardingState()" x-init="init()"> <!-- Onboarding Modal --> <div x-show="showOnboarding" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"> <div x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-surface border border-border2 rounded-2xl p-8 w-full max-w-sm"> <h2 class="font-display text-4xl text-yellow mb-1">TRACKFIT</h2> <p class="text-muted text-sm mb-6">Tu plan de 16 semanas comienza aquí.</p> <div class="space-y-4"> <div> <label class="block text-xs text-muted mb-1 uppercase tracking-wider">Tu nombre</label> <input type="text" x-model="name" placeholder="Ej. Daniel" class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder-muted2 focus:outline-none focus:border-yellow transition-colors"> </div> <div> <label class="block text-xs text-muted mb-1 uppercase tracking-wider">Inicio del plan</label> <input type="date" x-model="startDate" class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-yellow transition-colors"> </div> <p x-show="error" class="text-orange text-sm" x-text="error"></p> <button @click="submit()" class="w-full bg-yellow text-base font-bold py-3 rounded-lg hover:bg-yellow/90 active:scale-95 transition-all">
+<!DOCTYPE html><html lang="es" class="bg-base text-primary font-body"> <head><meta charset="UTF-8"><script>
+      (function () {
+        function getTheme() {
+          try {
+            return localStorage.getItem("trackfit_theme") === "light"
+              ? "light"
+              : "dark";
+          } catch (_) {
+            return "dark";
+          }
+        }
+        function applyTheme(theme) {
+          document.documentElement.classList.toggle("light", theme === "light");
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta)
+            meta.setAttribute(
+              "content",
+              theme === "light" ? "#f1f3f8" : "#0d0f14",
+            );
+        }
+        window.setTheme = function (theme) {
+          try {
+            localStorage.setItem("trackfit_theme", theme);
+          } catch (_) {}
+          applyTheme(theme);
+        };
+        window.toggleTheme = function () {
+          window.setTheme(getTheme() === "light" ? "dark" : "light");
+        };
+        applyTheme(getTheme());
+        document.addEventListener("astro:after-swap", function () {
+          applyTheme(getTheme());
+        });
+      })();
+    </script><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>Dashboard · TrackFit</title><link rel="icon" type="image/svg+xml" href="/avatar-batman.svg"><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#0d0f14"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="TrackFit"><link rel="apple-touch-icon" href="/icon-192.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"><meta name="astro-view-transitions-enabled" content="true"><meta name="astro-view-transitions-fallback" content="animate"><link rel="stylesheet" href="/_astro/calendar._2g1aYlq.css"><script type="module" src="/_astro/hoisted.CwPf4hkT.js"></script>
+<script type="module" src="/_astro/page.D2RhrP0O.js"></script></head> <body class="bg-base min-h-screen font-body" x-data="onboardingState()" x-init="init()"> <!-- Onboarding Modal --> <div x-show="showOnboarding" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"> <div x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="bg-surface border border-border2 rounded-2xl p-8 w-full max-w-sm"> <h2 class="font-display text-4xl text-yellow mb-1">TRACKFIT</h2> <p class="text-muted text-sm mb-6">
+Tu plan de 16 semanas comienza aquí.
+</p> <div class="space-y-4"> <div> <label class="block text-xs text-muted mb-1 uppercase tracking-wider">Tu nombre</label> <input type="text" x-model="name" placeholder="Ej. Daniel" class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder-muted2 focus:outline-none focus:border-yellow transition-colors"> </div> <div> <label class="block text-xs text-muted mb-1 uppercase tracking-wider">Inicio del plan</label> <input type="date" x-model="startDate" class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-yellow transition-colors"> </div> <p x-show="error" class="text-orange text-sm" x-text="error"></p> <button @click="submit()" class="w-full bg-yellow text-ink font-bold py-3 rounded-lg hover:bg-yellow/90 active:scale-95 transition-all">
 Empezar plan
-</button> </div> </div> </div> <!-- Layout wrapper --> <div class="flex min-h-screen"> <!-- Desktop Sidebar --> <aside class="hidden lg:flex flex-col w-60 bg-surface border-r border-border fixed top-0 left-0 h-full z-40"> <div class="px-6 py-5 border-b border-border"> <a href="/" class="font-display text-3xl text-yellow tracking-wider">TRACKFIT</a> <div id="sidebar-week-badge" class="mt-1 text-xs text-muted">Sem 1/16</div> </div> <nav class="flex-1 py-4 px-3"> <a href="/" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors bg-surface2 text-primary"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+</button> </div> </div> </div> <!-- Layout wrapper --> <div class="flex min-h-screen"> <!-- Desktop Sidebar --> <aside class="hidden lg:flex flex-col w-60 bg-surface border-r border-border fixed top-0 left-0 h-full z-40"> <div class="px-6 py-5 border-b border-border flex items-start justify-between gap-2"> <div> <a href="/" class="font-display text-3xl text-blue tracking-wider">TRACKFIT</a> <div id="sidebar-week-badge" class="mt-1 text-xs text-muted">
+Sem 1/16
+</div> </div> <button type="button" onclick="toggleTheme()" aria-label="Cambiar tema" class="theme-toggle-btn p-1.5 rounded-lg text-muted hover:text-primary hover:bg-surface2 transition-colors"> <svg xmlns="http://www.w3.org/2000/svg" class="icon-sun w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg> <svg xmlns="http://www.w3.org/2000/svg" class="icon-moon w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> </button> </div> <nav class="flex-1 py-4 px-3"> <a href="/" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors bg-surface2 text-primary"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
 Dashboard
 </a> <a href="/calendar" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors text-muted hover:text-primary hover:bg-surface2"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
 Calendario
-</a> <a href="/day/?date=2026-05-06" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors text-muted hover:text-primary hover:bg-surface2"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+</a> <a href="/day/?date=2026-06-06" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors text-muted hover:text-primary hover:bg-surface2"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
 Hoy
 </a> <a href="/progress" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors text-muted hover:text-primary hover:bg-surface2"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
 Progreso
 </a> <a href="/notes" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors text-muted hover:text-primary hover:bg-surface2"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
 Notas
-</a> </nav> </aside> <!-- Main content --> <main class="flex-1 lg:ml-60 pb-24 lg:pb-6"> <!-- Mobile header --> <header class="lg:hidden sticky top-0 z-30 bg-base/90 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between"> <a href="/" class="font-display text-2xl text-yellow tracking-wider">TRACKFIT</a> <span id="mobile-week-badge" class="text-xs bg-surface2 text-muted px-2 py-1 rounded-full">Sem 1/16</span> </header> <div class="animate-fade-in">  <div id="toast-container" class="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"></div>  <div class="px-4 py-6 lg:px-8 lg:py-8 max-w-4xl mx-auto" id="dashboard-root"> <!-- Loading state --> <div id="dashboard-loading" class="text-muted text-sm">Cargando...</div> <!-- Content (hidden until JS runs) --> <div id="dashboard-content" class="hidden space-y-6"> <!-- A) Hero --> <section> <p id="hero-greeting" class="text-muted text-sm mb-0.5"></p> <h1 id="hero-date" class="text-xl font-semibold text-primary mb-3"></h1> <div id="hero-badge-row" class="flex items-center gap-2 mb-4 flex-wrap"></div> <div id="session-type-row" class="flex items-center gap-3 mb-5"></div> <a id="cta-btn" href="#" class="inline-flex items-center gap-2 bg-yellow text-base font-bold px-5 py-3 rounded-xl hover:bg-yellow/90 active:scale-95 transition-all text-sm"> <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+</a> </nav> <div class="p-3 border-t border-border"> <a href="/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-muted hover:text-primary hover:bg-surface2"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+Ajustes
+</a> </div> </aside> <!-- Main content --> <main class="flex-1 lg:ml-60 pb-24 lg:pb-6"> <!-- Mobile header --> <header class="lg:hidden sticky top-0 z-30 bg-base/90 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between"> <a href="/" class="font-display text-2xl text-yellow tracking-wider">TRACKFIT</a> <div class="flex items-center gap-2"> <span id="mobile-week-badge" class="text-xs bg-surface2 text-muted px-2 py-1 rounded-full">Sem 1/16</span> <button type="button" onclick="toggleTheme()" aria-label="Cambiar tema" class="theme-toggle-btn p-1.5 rounded-lg text-muted hover:text-primary transition-colors"> <svg xmlns="http://www.w3.org/2000/svg" class="icon-sun w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg> <svg xmlns="http://www.w3.org/2000/svg" class="icon-moon w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> </button> <a href="/settings" class="p-1.5 rounded-lg transition-colors text-muted hover:text-primary"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> </a> </div> </header> <div class="animate-fade-in">  <div id="toast-container" class="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"></div>  <div class="px-4 py-6 lg:px-8 lg:py-8 max-w-4xl mx-auto" id="dashboard-root"> <!-- Loading state --> <div id="dashboard-loading" class="text-muted text-sm">Cargando...</div> <!-- Content (hidden until JS runs) --> <div id="dashboard-content" class="hidden space-y-6"> <!-- A) Hero --> <section> <p id="hero-greeting" class="text-muted text-sm mb-0.5"></p> <h1 id="hero-date" class="text-xl font-semibold text-primary mb-3"></h1> <div id="hero-badge-row" class="flex items-center gap-2 mb-4 flex-wrap"></div> <div id="session-type-row" class="flex items-center gap-3 mb-5"></div> <a id="cta-btn" href="#" class="inline-flex items-center gap-2 bg-blue text-white font-bold px-5 py-3 rounded-xl hover:bg-yellow/90 hover:text-black active:scale-95 transition-all text-sm"> <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
 Registrar sesión de hoy
-</a> </section> <!-- Week bar --> <div id="week-bar-wrapper"></div> <!-- B) Metrics --> <section> <h2 class="text-xs text-muted uppercase tracking-wider mb-3">Métricas rápidas</h2> <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" id="metrics-grid"></div> </section> <!-- C) Mini calendar --> <section> <h2 class="text-xs text-muted uppercase tracking-wider mb-3">Esta semana</h2> <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" id="week-pills"></div> </section> <!-- D) Recent notes --> <section id="notes-section"> <div class="flex items-center justify-between mb-3"> <h2 class="text-xs text-muted uppercase tracking-wider">Últimas notas</h2> <a href="/notes" class="text-xs text-yellow hover:underline">Ver todas →</a> </div> <div id="notes-list" class="space-y-2"></div> </section> </div> </div>  </div> </main> </div> <!-- Mobile bottom nav --> <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface border-t border-border flex items-center justify-around px-2" style="padding-bottom: env(safe-area-inset-bottom);"> <a href="/" class="flex flex-col items-center gap-0.5 py-3 px-3 text-yellow"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> <span class="text-[10px]">Dashboard</span> </a> <a href="/calendar" class="flex flex-col items-center gap-0.5 py-3 px-3 text-muted"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> <span class="text-[10px]">Calendario</span> </a> <a id="today-nav-link" href="/day/" class="flex flex-col items-center gap-0.5 py-3 px-3 text-muted"> <div class="bg-yellow rounded-full p-1.5"> <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-base" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> </div> <span class="text-[10px]">Hoy</span> </a> <a href="/progress" class="flex flex-col items-center gap-0.5 py-3 px-3 text-muted"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> <span class="text-[10px]">Progreso</span> </a> <a href="/notes" class="flex flex-col items-center gap-0.5 py-3 px-3 text-muted"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg> <span class="text-[10px]">Notas</span> </a> </nav> <script>
-    function onboardingState() {
-      return {
-        showOnboarding: false,
-        name: '',
-        startDate: new Date().toISOString().slice(0, 10),
-        error: '',
-        init() {
-          const config = this._getConfig();
-          if (!config) {
-            this.showOnboarding = true;
-          } else {
+</a> </section> <!-- Week bar --> <div id="week-bar-wrapper"></div> <!-- B) Metrics --> <section> <h2 class="text-xs text-muted uppercase tracking-wider mb-3">
+Métricas rápidas
+</h2> <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" id="metrics-grid"></div> </section> <!-- C) Mini calendar --> <section> <h2 class="text-xs text-muted uppercase tracking-wider mb-3">
+Esta semana
+</h2> <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" id="week-pills"></div> </section> <!-- D) Recent notes --> <section id="notes-section"> <div class="flex items-center justify-between mb-3"> <h2 class="text-xs text-muted uppercase tracking-wider">
+Últimas notas
+</h2> <a href="/notes" class="text-xs text-blue hover:underline">Ver todas →</a> </div> <div id="notes-list" class="space-y-2"></div> </section> </div> </div>  </div> </main> </div> <!-- Mobile bottom nav --> <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface border-t border-border flex items-center justify-around px-2" style="padding-bottom: env(safe-area-inset-bottom);"> <a href="/" class="flex flex-col items-center gap-0.5 py-3 px-3 text-yellow"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> <span class="text-[10px]">Dashboard</span> </a> <a href="/calendar" class="flex flex-col items-center gap-0.5 py-3 px-3 text-muted"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> <span class="text-[10px]">Calendario</span> </a> <a id="today-nav-link" href="/day/" class="flex flex-col items-center gap-0.5 py-3 px-3 text-muted"> <div class="bg-yellow rounded-full p-1.5"> <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> </div> <span class="text-[10px]">Hoy</span> </a> <a href="/progress" class="flex flex-col items-center gap-0.5 py-3 px-3 text-muted"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> <span class="text-[10px]">Progreso</span> </a> <a href="/notes" class="flex flex-col items-center gap-0.5 py-3 px-3 text-muted"> <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg> <span class="text-[10px]">Notas</span> </a> </nav> <script>
+      function onboardingState() {
+        return {
+          showOnboarding: false,
+          name: "",
+          startDate: new Date().toISOString().slice(0, 10),
+          error: "",
+          init() {
+            const config = this._getConfig();
+            if (!config) {
+              this.showOnboarding = true;
+            } else {
+              this._updateWeekBadge(config);
+            }
+            const todayLink = document.getElementById("today-nav-link");
+            if (todayLink) {
+              todayLink.href =
+                "/day/?date=" + new Date().toISOString().slice(0, 10);
+            }
+          },
+          submit() {
+            if (!this.name.trim()) {
+              this.error = "Por favor ingresa tu nombre.";
+              return;
+            }
+            if (!this.startDate) {
+              this.error = "Por favor selecciona una fecha de inicio.";
+              return;
+            }
+            const config = {
+              name: this.name.trim(),
+              startDate: this.startDate,
+            };
+            localStorage.setItem("trackfit_config", JSON.stringify(config));
+            this.showOnboarding = false;
             this._updateWeekBadge(config);
-          }
-          const todayLink = document.getElementById('today-nav-link');
-          if (todayLink) {
-            todayLink.href = '/day/?date=' + new Date().toISOString().slice(0, 10);
-          }
-        },
-        submit() {
-          if (!this.name.trim()) { this.error = 'Por favor ingresa tu nombre.'; return; }
-          if (!this.startDate) { this.error = 'Por favor selecciona una fecha de inicio.'; return; }
-          const config = { name: this.name.trim(), startDate: this.startDate };
-          localStorage.setItem('trackfit_config', JSON.stringify(config));
-          this.showOnboarding = false;
-          this._updateWeekBadge(config);
-        },
-        _getConfig() {
-          try { const item = localStorage.getItem('trackfit_config'); return item ? JSON.parse(item) : null; } catch { return null; }
-        },
-        _updateWeekBadge(config) {
-          if (!config) return;
-          const start = new Date(config.startDate + 'T00:00:00');
-          const today = new Date(); today.setHours(0,0,0,0);
-          const diff = Math.floor((today.getTime() - start.getTime()) / (1000*60*60*24));
-          const week = Math.max(1, Math.min(16, Math.floor(diff/7)+1));
-          const badge = 'Sem ' + week + '/16';
-          const mb = document.getElementById('mobile-week-badge');
-          const sb = document.getElementById('sidebar-week-badge');
+          },
+          _getConfig() {
+            try {
+              const item = localStorage.getItem("trackfit_config");
+              return item ? JSON.parse(item) : null;
+            } catch {
+              return null;
+            }
+          },
+          _updateWeekBadge(config) {
+            if (!config) return;
+            const start = new Date(config.startDate + "T00:00:00");
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const diff = Math.floor(
+              (today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+            );
+            const week = Math.max(1, Math.min(16, Math.floor(diff / 7) + 1));
+            const badge = "Sem " + week + "/16";
+            const mb = document.getElementById("mobile-week-badge");
+            const sb = document.getElementById("sidebar-week-badge");
+            if (mb) mb.textContent = badge;
+            if (sb) sb.textContent = badge;
+          },
+        };
+      }
+
+      // Re-run badge + today-link after every View Transition
+      document.addEventListener("astro:page-load", function () {
+        const todayLink = document.getElementById("today-nav-link");
+        if (todayLink) {
+          todayLink.href =
+            "/day/?date=" + new Date().toISOString().slice(0, 10);
+        }
+        try {
+          const cfg = JSON.parse(
+            localStorage.getItem("trackfit_config") || "null",
+          );
+          if (!cfg) return;
+          const start = new Date(cfg.startDate + "T00:00:00");
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          const diff = Math.floor(
+            (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+          );
+          const week = Math.max(1, Math.min(16, Math.floor(diff / 7) + 1));
+          const badge = "Sem " + week + "/16";
+          const mb = document.getElementById("mobile-week-badge");
+          const sb = document.getElementById("sidebar-week-badge");
           if (mb) mb.textContent = badge;
           if (sb) sb.textContent = badge;
-        }
-      };
-    }
-
-    // Re-run badge + today-link after every View Transition
-    document.addEventListener('astro:page-load', function () {
-      const todayLink = document.getElementById('today-nav-link');
-      if (todayLink) {
-        todayLink.href = '/day/?date=' + new Date().toISOString().slice(0, 10);
-      }
-      try {
-        const cfg = JSON.parse(localStorage.getItem('trackfit_config') || 'null');
-        if (!cfg) return;
-        const start = new Date(cfg.startDate + 'T00:00:00');
-        const now = new Date(); now.setHours(0,0,0,0);
-        const diff = Math.floor((now.getTime() - start.getTime()) / (1000*60*60*24));
-        const week = Math.max(1, Math.min(16, Math.floor(diff/7)+1));
-        const badge = 'Sem ' + week + '/16';
-        const mb = document.getElementById('mobile-week-badge');
-        const sb = document.getElementById('sidebar-week-badge');
-        if (mb) mb.textContent = badge;
-        if (sb) sb.textContent = badge;
-      } catch (_) {}
-    });
-  </script>  </body> </html> 
+        } catch (_) {}
+      });
+    </script>  </body> </html> 

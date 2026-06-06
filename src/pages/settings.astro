@@ -47,6 +47,12 @@ import Toast from '../components/Toast.astro';
 <script>
   import { getConfig, saveConfig } from '../scripts/storage.js';
 
+  declare global {
+    interface Window {
+      showToast?: (message: string, type?: string) => void;
+    }
+  }
+
   function renderPlanInfo(config) {
     const planInfo = document.getElementById('plan-info')!;
     const planStats = document.getElementById('plan-stats')!;
