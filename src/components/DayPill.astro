@@ -23,7 +23,7 @@ const dotColor = session?.type ? dotColorMap[session.type] || 'bg-muted2' : 'bg-
 const completed = session?.completed;
 ---
 <a
-  href={`/day/${date}`}
+  href={`/day/?date=${date}`}
   class={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[52px]
     ${isToday ? 'border-2 border-yellow bg-yellow/5' : 'border border-border hover:border-border2 bg-surface'}
   `}

@@ -18,6 +18,27 @@ function parseDate(dateStr) {
   return new Date(y, m - 1, d);
 }
 
+// Formats a Date as YYYY-MM-DD using its LOCAL calendar day.
+// Never use toISOString() for this: it converts to UTC first, which shifts the
+// day by one for anyone east of Greenwich (and after 18:00 west of it).
+export function toDateStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// Today's date in the user's local timezone, as YYYY-MM-DD.
+export function todayStr() {
+  return toDateStr(new Date());
+}
+
+export function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 export function getSession(date) {
   try {
     const all = getAllSessions();
@@ -68,7 +89,7 @@ export function saveNote(note) {
     const notes = getNotes();
     if (!note.id) {
       note.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
-      note.date = note.date || new Date().toISOString().slice(0, 10);
+      note.date = note.date || todayStr();
       notes.unshift(note);
     } else {
       const idx = notes.findIndex(n => n.id === note.id);
@@ -144,18 +165,18 @@ export function getStreak() {
     const all = getAllSessions();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().slice(0, 10);
+    const todayKey = toDateStr(today);
 
     const cursor = new Date(today);
     // If today isn't completed yet, start counting from yesterday so a
     // prior streak isn't wiped out mid-day before the session is logged.
-    if (!all[todayStr]?.completed) {
+    if (!all[todayKey]?.completed) {
       cursor.setDate(cursor.getDate() - 1);
     }
 
     let streak = 0;
     for (let i = 0; i < 365; i++) {
-      const dateStr = cursor.toISOString().slice(0, 10);
+      const dateStr = toDateStr(cursor);
       const session = all[dateStr];
       if (session && session.completed) {
         streak++;
@@ -181,7 +202,7 @@ export function getWeekCompletion() {
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = toDateStr(d);
       if (all[dateStr] && all[dateStr].completed) completed++;
     }
     const total = Object.values(DAY_SESSION_MAP).filter(d => d.type !== 'descanso').length;
@@ -244,7 +265,7 @@ export function getWaterHistory(days = 14) {
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = toDateStr(d);
       result.push({ date: dateStr, water: all[dateStr]?.water || 0 });
     }
     return result;

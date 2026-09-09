@@ -126,6 +126,7 @@ import Toast from "../components/Toast.astro";
     saveNote,
     deleteNote,
     searchNotes,
+    todayStr,
   } from "../scripts/storage.js";
 
   declare global {
@@ -419,7 +420,7 @@ import Toast from "../components/Toast.astro";
   function createNewNote() {
     const note = {
       id: "",
-      date: new Date().toISOString().slice(0, 10),
+      date: todayStr(),
       title: "",
       content: "",
       tags: [],

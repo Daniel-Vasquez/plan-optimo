@@ -246,7 +246,8 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
             Calendario
           </a>
           <a
-            href={`/day/?date=${new Date().toISOString().slice(0, 10)}`}
+            data-today-link
+            href="/day/"
             class={`nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${currentPage === "today" ? "bg-surface2 text-primary" : "text-muted hover:text-primary hover:bg-surface2"}`}
           >
             <svg
@@ -463,6 +464,7 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
       </a>
       <a
         id="today-nav-link"
+        data-today-link
         href="/day/"
         class={`flex flex-col items-center gap-0.5 py-3 px-3 ${currentPage === "today" ? "text-yellow" : "text-muted"}`}
       >
@@ -521,11 +523,32 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
     </nav>
 
     <script is:inline>
+      // Local calendar day as YYYY-MM-DD. toISOString() would convert to UTC
+      // first and shift the day for anyone not on UTC.
+      function trackfitTodayStr() {
+        const d = new Date();
+        return (
+          d.getFullYear() +
+          "-" +
+          String(d.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(d.getDate()).padStart(2, "0")
+        );
+      }
+
+      // The "Hoy" links must resolve at runtime, never at build time.
+      function updateTodayLinks() {
+        const today = trackfitTodayStr();
+        document.querySelectorAll("[data-today-link]").forEach(function (a) {
+          a.href = "/day/?date=" + today;
+        });
+      }
+
       function onboardingState() {
         return {
           showOnboarding: false,
           name: "",
-          startDate: new Date().toISOString().slice(0, 10),
+          startDate: trackfitTodayStr(),
           error: "",
           init() {
             const config = this._getConfig();
@@ -534,11 +557,7 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
             } else {
               this._updateWeekBadge(config);
             }
-            const todayLink = document.getElementById("today-nav-link");
-            if (todayLink) {
-              todayLink.href =
-                "/day/?date=" + new Date().toISOString().slice(0, 10);
-            }
+            updateTodayLinks();
           },
           submit() {
             if (!this.name.trim()) {
@@ -585,11 +604,7 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
 
       // Re-run badge + today-link after every View Transition
       document.addEventListener("astro:page-load", function () {
-        const todayLink = document.getElementById("today-nav-link");
-        if (todayLink) {
-          todayLink.href =
-            "/day/?date=" + new Date().toISOString().slice(0, 10);
-        }
+        updateTodayLinks();
         try {
           const cfg = JSON.parse(
             localStorage.getItem("trackfit_config") || "null",

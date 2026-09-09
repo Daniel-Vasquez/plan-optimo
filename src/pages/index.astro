@@ -94,6 +94,7 @@ import Toast from "../components/Toast.astro";
     getWeekCompletion,
     getBestPace,
     getNotes,
+    toDateStr,
   } from "../scripts/storage.js";
 
   function escapeHtml(str: string) {
@@ -120,7 +121,7 @@ import Toast from "../components/Toast.astro";
     const today = new Date();
     const hour = today.getHours();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().slice(0, 10);
+    const todayStr = toDateStr(today);
     const week = getCurrentWeek();
     const plan = getSessionTypeForDate(todayStr);
     const todaySession = getSession(todayStr);
@@ -249,7 +250,7 @@ import Toast from "../components/Toast.astro";
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(startOfWeek.getDate() + i);
-      const dStr = d.toISOString().slice(0, 10);
+      const dStr = toDateStr(d);
       const sesh = getSession(dStr);
       const planDay = getSessionTypeForDate(dStr);
       const isToday = dStr === todayStr;

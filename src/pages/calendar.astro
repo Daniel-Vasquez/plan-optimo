@@ -30,6 +30,7 @@ import Toast from "../components/Toast.astro";
     getAllSessions,
     getSessionTypeForDate,
     getConfig,
+    toDateStr,
   } from "../scripts/storage.js";
 
   const typeColors = {
@@ -72,7 +73,7 @@ import Toast from "../components/Toast.astro";
   currentDate.setHours(0, 0, 0, 0);
 
   function isoDate(d) {
-    return d.toISOString().slice(0, 10);
+    return toDateStr(d);
   }
   function addDays(d, n) {
     const r = new Date(d);
