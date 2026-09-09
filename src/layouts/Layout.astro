@@ -1,5 +1,5 @@
 ---
-import { ViewTransitions } from "astro:transitions";
+import { ClientRouter } from "astro:transitions";
 import "../styles/global.css";
 
 export interface Props {
@@ -70,7 +70,7 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
       rel="stylesheet"
     />
     <slot name="head" />
-    <ViewTransitions />
+    <ClientRouter />
   </head>
   <body
     class="bg-base min-h-screen font-body"
