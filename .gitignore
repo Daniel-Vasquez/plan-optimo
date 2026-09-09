@@ -1,1 +1,11 @@
+# dependencias
 node_modules
+
+# salida del build (Vercel la genera con `npm run build`)
+dist
+
+# caché generada por Astro
+.astro
+
+# notas locales
+Claude.md
