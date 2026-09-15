@@ -1,12 +1,23 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import "../styles/global.css";
+import { getProfile } from "../lib/db/repos/profiles";
+import { planWeekFor, todayInTimezone } from "../lib/date";
 
 export interface Props {
   title?: string;
   currentPage?: string;
 }
 const { title = "TrackFit", currentPage = "" } = Astro.props;
+
+// La semana del plan se calcula en el servidor a partir del perfil. Antes
+// salía de `trackfit_config` en localStorage, que lo escribía el modal de
+// onboarding; ese modal desapareció al mover el alta a /registro.
+const profile = Astro.locals.user ? await getProfile(Astro.locals.user.id) : null;
+const planWeeks = profile?.planWeeks ?? 12;
+const weekBadge = profile
+  ? `Sem ${planWeekFor(profile.planStartDate, todayInTimezone(profile.timezone), planWeeks)}/${planWeeks}`
+  : "";
 ---
 
 <!doctype html>
@@ -72,65 +83,7 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
     <slot name="head" />
     <ClientRouter />
   </head>
-  <body
-    class="bg-base min-h-screen font-body"
-    x-data="onboardingState()"
-    x-init="init()"
-  >
-    <!-- Onboarding Modal -->
-    <div
-      x-show="showOnboarding"
-      x-transition:enter="transition ease-out duration-200"
-      x-transition:enter-start="opacity-0"
-      x-transition:enter-end="opacity-100"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
-    >
-      <div
-        x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="opacity-0 scale-95"
-        x-transition:enter-end="opacity-100 scale-100"
-        class="bg-surface border border-border2 rounded-2xl p-8 w-full max-w-sm"
-      >
-        <h2 class="font-display text-4xl text-yellow mb-1">TRACKFIT</h2>
-        <p class="text-muted text-sm mb-6">
-          Tu plan de 16 semanas comienza aquí.
-        </p>
-
-        <div class="space-y-4">
-          <div>
-            <label
-              class="block text-xs text-muted mb-1 uppercase tracking-wider"
-              >Tu nombre</label
-            >
-            <input
-              type="text"
-              x-model="name"
-              placeholder="Ej. Daniel"
-              class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-yellow transition-colors"
-            />
-          </div>
-          <div>
-            <label
-              class="block text-xs text-muted mb-1 uppercase tracking-wider"
-              >Inicio del plan</label
-            >
-            <input
-              type="date"
-              x-model="startDate"
-              class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary focus:outline-hidden focus:border-yellow transition-colors"
-            />
-          </div>
-          <p x-show="error" class="text-orange text-sm" x-text="error"></p>
-          <button
-            @click="submit()"
-            class="w-full bg-yellow text-ink font-bold py-3 rounded-lg hover:bg-yellow/90 active:scale-95 transition-all"
-          >
-            Empezar plan
-          </button>
-        </div>
-      </div>
-    </div>
-
+  <body class="bg-base min-h-screen font-body">
     <!-- Layout wrapper -->
     <div class="flex min-h-screen">
       <!-- Desktop Sidebar -->
@@ -144,9 +97,7 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
             <a href="/" class="font-display text-3xl text-blue tracking-wider"
               >TRACKFIT</a
             >
-            <div id="sidebar-week-badge" class="mt-1 text-xs text-muted">
-              Sem 1/16
-            </div>
+            <div class="mt-1 text-xs text-muted">{weekBadge}</div>
           </div>
           <button
             type="button"
@@ -353,9 +304,8 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
           >
           <div class="flex items-center gap-2">
             <span
-              id="mobile-week-badge"
               class="text-xs bg-surface2 text-muted px-2 py-1 rounded-full"
-              >Sem 1/16</span
+              >{weekBadge}</span
             >
             <button
               type="button"
@@ -583,86 +533,12 @@ const { title = "TrackFit", currentPage = "" } = Astro.props;
         });
       }
 
-      function onboardingState() {
-        return {
-          showOnboarding: false,
-          name: "",
-          startDate: trackfitTodayStr(),
-          error: "",
-          init() {
-            const config = this._getConfig();
-            if (!config) {
-              this.showOnboarding = true;
-            } else {
-              this._updateWeekBadge(config);
-            }
-            updateTodayLinks();
-          },
-          submit() {
-            if (!this.name.trim()) {
-              this.error = "Por favor ingresa tu nombre.";
-              return;
-            }
-            if (!this.startDate) {
-              this.error = "Por favor selecciona una fecha de inicio.";
-              return;
-            }
-            const config = {
-              name: this.name.trim(),
-              startDate: this.startDate,
-            };
-            localStorage.setItem("trackfit_config", JSON.stringify(config));
-            this.showOnboarding = false;
-            this._updateWeekBadge(config);
-          },
-          _getConfig() {
-            try {
-              const item = localStorage.getItem("trackfit_config");
-              return item ? JSON.parse(item) : null;
-            } catch {
-              return null;
-            }
-          },
-          _updateWeekBadge(config) {
-            if (!config) return;
-            const start = new Date(config.startDate + "T00:00:00");
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const diff = Math.floor(
-              (today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
-            );
-            const week = Math.max(1, Math.min(16, Math.floor(diff / 7) + 1));
-            const badge = "Sem " + week + "/16";
-            const mb = document.getElementById("mobile-week-badge");
-            const sb = document.getElementById("sidebar-week-badge");
-            if (mb) mb.textContent = badge;
-            if (sb) sb.textContent = badge;
-          },
-        };
-      }
 
-      // Re-run badge + today-link after every View Transition
-      document.addEventListener("astro:page-load", function () {
-        updateTodayLinks();
-        try {
-          const cfg = JSON.parse(
-            localStorage.getItem("trackfit_config") || "null",
-          );
-          if (!cfg) return;
-          const start = new Date(cfg.startDate + "T00:00:00");
-          const now = new Date();
-          now.setHours(0, 0, 0, 0);
-          const diff = Math.floor(
-            (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
-          );
-          const week = Math.max(1, Math.min(16, Math.floor(diff / 7) + 1));
-          const badge = "Sem " + week + "/16";
-          const mb = document.getElementById("mobile-week-badge");
-          const sb = document.getElementById("sidebar-week-badge");
-          if (mb) mb.textContent = badge;
-          if (sb) sb.textContent = badge;
-        } catch (_) {}
-      });
+      // Tras cada View Transition hay que recalcular el enlace de "Hoy": el
+      // HTML llega del servidor, pero la fecha de hoy depende del navegador.
+      // El badge de semana ya no se toca aquí: lo renderiza el servidor desde
+      // el perfil.
+      document.addEventListener("astro:page-load", updateTodayLinks);
     </script>
 
     <style is:global>
