@@ -7,5 +7,13 @@ dist
 # caché generada por Astro
 .astro
 
+# salida del adaptador de Vercel
+.vercel
+
+# variables de entorno — nunca versionar (.env.example sí se versiona)
+.env
+.env.*
+!.env.example
+
 # notas locales
 Claude.md

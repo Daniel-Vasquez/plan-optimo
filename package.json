@@ -9,9 +9,9 @@
   },
   "dependencies": {
     "@astrojs/alpinejs": "^0.4.0",
-    "@astrojs/tailwind": "^5.1.0",
+    "@tailwindcss/vite": "^4.3.3",
     "alpinejs": "^3.14.1",
-    "astro": "^5.18.2",
-    "tailwindcss": "^3.4.14"
+    "astro": "^7.3.2",
+    "tailwindcss": "^4.3.3"
   }
 }

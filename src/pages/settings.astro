@@ -19,7 +19,7 @@ import Toast from "../components/Toast.astro";
           id="settings-name"
           type="text"
           placeholder="Tu nombre"
-          class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder-muted2 focus:outline-none focus:border-yellow transition-colors"
+          class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-yellow transition-colors"
         />
       </div>
       <div>
@@ -29,7 +29,7 @@ import Toast from "../components/Toast.astro";
         <input
           id="settings-date"
           type="date"
-          class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-yellow transition-colors"
+          class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary focus:outline-hidden focus:border-yellow transition-colors"
         />
       </div>
       <p id="settings-error" class="text-orange text-sm hidden"></p>

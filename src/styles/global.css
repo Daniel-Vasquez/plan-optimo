@@ -1,75 +1,116 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Escanea todo el código fuente en busca de clases, incluidas las que se
+   generan dentro de plantillas de string en los bloques <script>. */
+@source "../";
+
+/* ---------------------------------------------------------------------------
+   Tokens crudos del tema.
+
+   Los colores se guardan como TRIPLETES RGB (`13 15 20`, no `rgb(13 15 20)`)
+   para poder componerlos con alfa en utilidades arbitrarias, p. ej.
+   `bg-[rgb(var(--edge)/0.05)]`.
+
+   Van en el namespace `--rgb-*` y no `--color-*` porque en Tailwind v4 este
+   último le pertenece al motor de temas: colisionar con él rompe la paleta.
+   --------------------------------------------------------------------------- */
+:root {
+  /* Tema oscuro (por defecto) */
+  --rgb-base: 13 15 20;
+  --rgb-surface: 22 25 32;
+  --rgb-surface2: 30 34 48;
+  --rgb-primary: 240 242 248;
+  --rgb-muted: 136 144 168;
+  --rgb-muted2: 90 98 120;
+  --rgb-yellow: 232 255 71;
+  --rgb-blue: 71 194 255;
+  --rgb-orange: 255 107 53;
+  --rgb-ink: 13 15 20;
+
+  /* Bordes: valores completos, no se componen con alfa desde utilidades */
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.13);
+
+  /* Base RGB para overlays translúcidos (blanco sobre oscuro en tema oscuro) */
+  --edge: 255 255 255;
+}
+
+:root.light {
+  --rgb-base: 241 243 248;
+  --rgb-surface: 255 255 255;
+  --rgb-surface2: 231 234 242;
+  --rgb-primary: 17 20 27;
+  --rgb-muted: 90 98 120;
+  --rgb-muted2: 136 144 168;
+
+  --line: rgba(13, 15, 20, 0.08);
+  --line-strong: rgba(13, 15, 20, 0.15);
+
+  --edge: 13 15 20;
+}
+
+/* ---------------------------------------------------------------------------
+   Tema de Tailwind.
+
+   `inline` hace que las utilidades emitan la expresión directamente
+   (`background-color: rgb(var(--rgb-base))`) en vez de una indirección
+   `var(--color-base)`. Es lo que permite que cambiar `.light` en <html>
+   repinte toda la paleta sin regenerar CSS.
+   --------------------------------------------------------------------------- */
+@theme inline {
+  --color-base: rgb(var(--rgb-base));
+  --color-surface: rgb(var(--rgb-surface));
+  --color-surface2: rgb(var(--rgb-surface2));
+  --color-primary: rgb(var(--rgb-primary));
+  --color-muted: rgb(var(--rgb-muted));
+  --color-muted2: rgb(var(--rgb-muted2));
+  --color-yellow: rgb(var(--rgb-yellow));
+  --color-blue: rgb(var(--rgb-blue));
+  --color-orange: rgb(var(--rgb-orange));
+  --color-ink: rgb(var(--rgb-ink));
+
+  --color-border: var(--line);
+  --color-border2: var(--line-strong);
+
+  --font-display: "Bebas Neue", sans-serif;
+  --font-body: "DM Sans", sans-serif;
+}
 
 @layer base {
-  :root {
-    /* Dark theme (default) — RGB triplets for colors used with opacity modifiers */
-    --color-base: 13 15 20;
-    --color-surface: 22 25 32;
-    --color-surface2: 30 34 48;
-    --color-primary: 240 242 248;
-    --color-muted: 136 144 168;
-    --color-muted2: 90 98 120;
-    --color-yellow: 232 255 71;
-    --color-blue: 71 194 255;
-    --color-orange: 255 107 53;
-    --color-ink: 13 15 20;
-
-    /* Full color values (not used with opacity modifiers) */
-    --color-border: rgba(255, 255, 255, 0.07);
-    --color-border2: rgba(255, 255, 255, 0.13);
-
-    /* Base RGB for translucent overlays (white-on-dark in dark mode) */
-    --edge: 255 255 255;
-  }
-
-  :root.light {
-    --color-base: 241 243 248;
-    --color-surface: 255 255 255;
-    --color-surface2: 231 234 242;
-    --color-primary: 17 20 27;
-    --color-muted: 90 98 120;
-    --color-muted2: 136 144 168;
-
-    --color-border: rgba(13, 15, 20, 0.08);
-    --color-border2: rgba(13, 15, 20, 0.15);
-
-    --edge: 13 15 20;
-  }
-
   html {
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-body);
   }
 
   * {
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* v4 cambia el color por defecto de `border`/`divide` a currentColor.
+     Restauramos el comportamiento de v3 con el token del tema. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
+  }
 }
 
-@layer utilities {
-  .theme-toggle-btn .icon-moon {
-    display: none;
-  }
-  :root.light .theme-toggle-btn .icon-sun {
-    display: none;
-  }
-  :root.light .theme-toggle-btn .icon-moon {
-    display: block;
-  }
+/* Alterna el icono del botón de tema según el tema activo. */
+.theme-toggle-btn .icon-moon {
+  display: none;
+}
+:root.light .theme-toggle-btn .icon-sun {
+  display: none;
+}
+:root.light .theme-toggle-btn .icon-moon {
+  display: block;
+}
 
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
     display: none;
-  }
-
-  .line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 }

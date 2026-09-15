@@ -1,10 +1,12 @@
 import { defineConfig } from 'astro/config';
-import tailwind from '@astrojs/tailwind';
 import alpinejs from '@astrojs/alpinejs';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   integrations: [
-    tailwind(),
     alpinejs({ entrypoint: '/src/entrypoint' }),
   ],
+  vite: {
+    plugins: [tailwindcss()],
+  },
 });

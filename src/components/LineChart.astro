@@ -21,7 +21,7 @@ const dataJson = JSON.stringify(data);
   function themeRGB(varName) {
     return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
   }
-  function themeColor(name) { return `rgb(${themeRGB('--color-' + name)})`; }
+  function themeColor(name) { return `rgb(${themeRGB('--rgb-' + name)})`; }
   function edgeColor(alpha) { return `rgb(${themeRGB('--edge')} / ${alpha})`; }
 
   const plugins = [];
