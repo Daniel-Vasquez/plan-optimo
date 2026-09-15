@@ -1,0 +1,20 @@
+---
+import Layout from "../layouts/Layout.astro";
+import ComingSoon from "../components/ComingSoon.astro";
+---
+
+<Layout title="Nutrición" currentPage="nutricion">
+  <ComingSoon
+    title="Nutrición"
+    icon="nutricion"
+    tanda={6}
+    description="Registro diario de comidas contra las metas de macros del plan, con la proteína como métrica destacada."
+    features={[
+      "Comidas por franja: desayuno, comida, cena, snack, pre y post-entreno",
+      "Anillos de kcal, proteína, carbohidratos y grasa frente a la meta del día",
+      "Meta alta o baja según sea día de entreno o de descanso",
+      "Catálogo propio de alimentos con favoritos y recientes",
+      "Duplicar el día anterior, porque la dieta es repetitiva",
+    ]}
+  />
+</Layout>

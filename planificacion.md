@@ -2,7 +2,7 @@
 
 > **Documento de arquitectura y hoja de ruta.** Fase 1: análisis y planificación. No se ha escrito ni modificado código de aplicación.
 > **Fuentes del análisis:** estructura real del repositorio (`src/`, `astro.config.mjs`, `package.json`, `tailwind.config.js`) y el plan de entrenamiento `rutina.md`.
-> **Fecha:** 2026-09-14 · **Estado:** Tandas 0 y 1 ✅ completadas · siguiente: Tanda 2 (layout y perfil).
+> **Fecha:** 2026-09-14 · **Estado:** Tandas 0, 1 y 2 ✅ completadas · siguiente: Tanda 3 (hidratación).
 
 ---
 
@@ -582,7 +582,7 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 ---
 
-### Tanda 2 — Layout nuevo y perfil de usuario
+### Tanda 2 — Layout nuevo y perfil de usuario ✅ *completada*
 
 **Objetivo:** header fijo superior funcionando en desktop y mobile; el usuario configura su perfil y sus metas.
 
@@ -597,7 +597,16 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 **Archivos a modificar:** `src/layouts/Layout.astro`, `src/pages/settings.astro` → `src/pages/ajustes.astro`, `src/pages/index.astro`, `tailwind.config.js`
 **Archivos a eliminar:** el modal de onboarding dentro de `Layout.astro` (lo sustituye `/registro` + `/ajustes`)
 
-**Requiero de tu lado:** nada nuevo. Opcionalmente, confirmar los 7 destinos de navegación y su orden.
+**Destinos confirmados:** Inicio · Fuerza · Running · Nutrición · Agua · Calendario · Notas.
+
+**Notas de ejecución**
+- `Layout.astro` pasa de 593 a 108 líneas: la barra lateral y la inferior mantenían la misma lista de destinos duplicada, y ahora hay una sola.
+- Con 7 destinos los iconos no caben siempre en móvil: la tira desplaza en horizontal en vez de esconder destinos en un menú «más», donde nadie los encuentra.
+- Rutas renombradas al esquema definitivo: `/calendar`→`/calendario`, `/notes`→`/notas`, `/settings`→`/ajustes`.
+- Los cuatro módulos aún sin construir (`/fuerza`, `/progreso-running`, `/nutricion`, `/hidratacion`) tienen página de marcador en vez de dar 404, cada una indicando su tanda. `/progreso-running` enlaza a `/progress`, que sigue sirviendo las gráficas actuales.
+- **Regresión detectada y corregida:** el dashboard leía el nombre de `trackfit_config` en `localStorage`, que dejó de escribirse al quitar el modal de onboarding. Hacía `return` temprano y se quedaba **en blanco**. Ahora los datos del plan llegan del servidor en `data-attributes`.
+- Las «fases» de 16 semanas del dashboard eran inventadas; se sustituyen por los bloques de 4 semanas reales de `rutina.md §4C`, con aviso visible en la semana de descarga.
+- Se añaden `vitest` y 27 pruebas sobre `date.ts` y `metrics.ts`, centradas en los casos que más fallan: día local frente a UTC, zona horaria del usuario frente a la del servidor, el domingo como final de semana y los límites de la semana del plan.
 
 ---
 

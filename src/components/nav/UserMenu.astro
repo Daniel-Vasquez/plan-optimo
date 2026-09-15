@@ -1,0 +1,84 @@
+---
+import Icon from './Icon.astro';
+
+/**
+ * Menú de usuario.
+ *
+ * Usa <details>/<summary> en vez de un desplegable con estado en JS: sale
+ * gratis el manejo de teclado y funciona aunque el script no llegue a
+ * ejecutarse. El único JS es el que lo cierra al pulsar fuera o con Escape,
+ * que es lo que <details> no da por sí solo.
+ */
+export interface Props {
+  name: string;
+  email: string;
+  weekBadge?: string;
+}
+
+const { name, email, weekBadge = '' } = Astro.props;
+const initial = (name || email).trim().charAt(0).toUpperCase() || '?';
+---
+
+<details class="user-menu relative shrink-0">
+  <summary
+    class="flex cursor-pointer list-none items-center gap-2 rounded-lg p-1.5 text-muted transition-colors hover:text-primary hover:bg-surface2"
+    aria-label="Menú de usuario"
+  >
+    <span
+      class="flex h-7 w-7 items-center justify-center rounded-full bg-surface2 text-xs font-bold text-primary"
+      aria-hidden="true">{initial}</span
+    >
+  </summary>
+
+  <div
+    class="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-border2 bg-surface shadow-xl"
+  >
+    <div class="border-b border-border px-4 py-3">
+      <p class="truncate text-sm font-semibold text-primary">{name}</p>
+      <p class="truncate text-xs text-muted">{email}</p>
+      {weekBadge && <p class="mt-1.5 text-xs text-muted2 lg:hidden">{weekBadge}</p>}
+    </div>
+    <nav class="py-1">
+      <a
+        href="/ajustes"
+        class="flex items-center gap-3 px-4 py-2.5 text-sm text-muted transition-colors hover:bg-surface2 hover:text-primary"
+      >
+        <Icon name="ajustes" class="w-4 h-4" />
+        Ajustes
+      </a>
+      <a
+        href="/logout"
+        class="flex items-center gap-3 px-4 py-2.5 text-sm text-muted transition-colors hover:bg-surface2 hover:text-orange"
+      >
+        <Icon name="salir" class="w-4 h-4" />
+        Cerrar sesión
+      </a>
+    </nav>
+  </div>
+</details>
+
+<style>
+  /* Safari sigue pintando el triángulo del summary si no se quita aparte. */
+  .user-menu > summary::-webkit-details-marker {
+    display: none;
+  }
+</style>
+
+<script>
+  function bindUserMenu() {
+    const menus = document.querySelectorAll<HTMLDetailsElement>('.user-menu');
+
+    document.addEventListener('click', (event) => {
+      for (const menu of menus) {
+        if (menu.open && !menu.contains(event.target as Node)) menu.open = false;
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      for (const menu of menus) menu.open = false;
+    });
+  }
+
+  document.addEventListener('astro:page-load', bindUserMenu);
+</script>

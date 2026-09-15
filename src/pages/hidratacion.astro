@@ -1,0 +1,20 @@
+---
+import Layout from "../layouts/Layout.astro";
+import ComingSoon from "../components/ComingSoon.astro";
+---
+
+<Layout title="Hidratación" currentPage="agua">
+  <ComingSoon
+    title="Hidratación"
+    icon="agua"
+    tanda={3}
+    description="Contador diario de agua contra la meta del perfil, integrado también en el descanso entre series."
+    features={[
+      "Botones rápidos de +250, +500 y +750 ml, con la hora de cada toma",
+      "Meta dinámica: los sábados sube por las 4 horas de voleibol",
+      "Registro por serie durante el descanso en la pantalla de fuerza",
+      "Indicador en la barra superior y tarjeta en el inicio",
+      "Historial de 30 días y racha de días cumplidos",
+    ]}
+  />
+</Layout>

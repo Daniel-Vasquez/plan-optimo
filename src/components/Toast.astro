@@ -2,17 +2,14 @@
 ---
 <div
   id="toast-container"
-  class="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"
+  class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"
 ></div>
 
 <script>
-  declare global {
-    interface Window {
-      showToast: (message: string, type?: string) => void;
-    }
-  }
-
-  window.showToast = function(message, type = 'success') {
+  // El tipo de `showToast` se declara una sola vez, en src/env.d.ts. Repetirlo
+  // aquí con una firma distinta (no opcional) hacía chocar las dos
+  // declaraciones globales.
+  window.showToast = function (message: string, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
 

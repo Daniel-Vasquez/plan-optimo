@@ -1,0 +1,283 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Toast from "../components/Toast.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import { daysBetween, planWeekFor, todayInTimezone } from "../lib/date";
+import { DEFAULT_BASELINES, DEFAULT_GOALS } from "../types/models";
+
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+
+// El perfil se renderiza en el servidor con los valores ya resueltos, así que
+// los campos llegan rellenos en el propio HTML. Antes se pintaban vacíos y se
+// rellenaban con JS desde localStorage, con su parpadeo correspondiente.
+const goals = profile?.goals ?? DEFAULT_GOALS;
+const baselines = profile?.baselines ?? DEFAULT_BASELINES;
+const planStartDate = profile?.planStartDate ?? "";
+const planWeeks = profile?.planWeeks ?? 12;
+const timezone = profile?.timezone ?? "America/Mexico_City";
+
+const today = todayInTimezone(timezone);
+const currentWeek = planStartDate ? planWeekFor(planStartDate, today, planWeeks) : null;
+const elapsed = planStartDate ? daysBetween(planStartDate, today) : 0;
+const daysLeft = planStartDate ? Math.max(0, planWeeks * 7 - elapsed) : null;
+
+const fmtDate = (value: string) =>
+  new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" })
+    .format(new Date(`${value}T00:00:00`));
+
+let endDate = "";
+if (planStartDate) {
+  const end = new Date(`${planStartDate}T00:00:00`);
+  end.setDate(end.getDate() + planWeeks * 7);
+  endDate = new Intl.DateTimeFormat("es-MX", {
+    day: "numeric", month: "long", year: "numeric",
+  }).format(end);
+}
+
+const field =
+  "w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-yellow transition-colors";
+const label = "block text-xs text-muted uppercase tracking-wider mb-1.5";
+---
+
+<Layout title="Ajustes" currentPage="ajustes">
+  <Toast />
+  <div class="mx-auto max-w-2xl space-y-6 px-4 py-6 lg:px-8 lg:py-8">
+    <h1 class="font-display text-3xl text-primary">AJUSTES</h1>
+
+    <form id="profile-form" class="space-y-6" novalidate>
+      <!-- Perfil -->
+      <section class="space-y-4 rounded-xl border border-border2 bg-surface p-6">
+        <h2 class="text-sm font-semibold text-primary">Tu perfil</h2>
+
+        <div>
+          <label class={label} for="displayName">Nombre</label>
+          <input id="displayName" name="displayName" type="text" class={field}
+            value={profile?.displayName ?? ""} placeholder="Tu nombre" />
+        </div>
+
+        <div>
+          <label class={label} for="email">Email</label>
+          <input id="email" type="email" class={`${field} opacity-60`} value={user.email} disabled />
+          <p class="mt-1.5 text-[11px] text-muted2">El email no se puede cambiar por ahora.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class={label} for="heightCm">Altura (cm)</label>
+            <input id="heightCm" name="heightCm" type="number" min="100" max="250" step="1"
+              class={field} value={profile?.heightCm ?? ""} placeholder="165" />
+          </div>
+          <div>
+            <label class={label} for="startWeightKg">Peso inicial (kg)</label>
+            <input id="startWeightKg" name="startWeightKg" type="number" min="30" max="250" step="0.1"
+              class={field} value={profile?.startWeightKg ?? ""} placeholder="66.3" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class={label} for="displayUnit">Unidad de peso</label>
+            <select id="displayUnit" name="displayUnit" class={field}>
+              <option value="lb" selected={profile?.displayUnit !== "kg"}>Libras (lb)</option>
+              <option value="kg" selected={profile?.displayUnit === "kg"}>Kilogramos (kg)</option>
+            </select>
+            <p class="mt-1.5 text-[11px] text-muted2">
+              Las cargas se guardan siempre en kg; esto sólo cambia cómo se muestran.
+            </p>
+          </div>
+          <div>
+            <label class={label} for="timezone">Zona horaria</label>
+            <input id="timezone" name="timezone" type="text" class={field} value={timezone} />
+            <p class="mt-1.5 text-[11px] text-muted2">Decide qué día es "hoy" para tus registros.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Plan -->
+      <section class="space-y-4 rounded-xl border border-border2 bg-surface p-6">
+        <h2 class="text-sm font-semibold text-primary">Plan</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class={label} for="planStartDate">Fecha de inicio</label>
+            <input id="planStartDate" name="planStartDate" type="date" class={field} value={planStartDate} />
+          </div>
+          <div>
+            <label class={label} for="planWeeks">Duración (semanas)</label>
+            <input id="planWeeks" name="planWeeks" type="number" min="1" max="52" step="1"
+              class={field} value={planWeeks} />
+          </div>
+        </div>
+
+        {currentWeek !== null && (
+          <div class="grid grid-cols-2 gap-4 border-t border-border pt-4">
+            {[
+              { label: "Semana actual", value: `${currentWeek} de ${planWeeks}` },
+              { label: "Días restantes", value: daysLeft! > 0 ? `${daysLeft}` : "¡Completado!" },
+              { label: "Inicio del plan", value: fmtDate(planStartDate) },
+              { label: "Fin estimado", value: endDate },
+            ].map((stat) => (
+              <div>
+                <p class="mb-1 text-xs uppercase tracking-wider text-muted">{stat.label}</p>
+                <p class="text-base font-semibold text-primary">{stat.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <!-- Metas -->
+      <section class="space-y-4 rounded-xl border border-border2 bg-surface p-6">
+        <h2 class="text-sm font-semibold text-primary">Metas diarias</h2>
+        <p class="text-xs text-muted">
+          Valores de partida tomados del diagnóstico de <code class="text-muted2">rutina.md</code>.
+        </p>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class={label} for="waterMlPerDay">Agua (ml/día)</label>
+            <input id="waterMlPerDay" name="waterMlPerDay" type="number" min="0" max="10000" step="50"
+              class={field} value={goals.waterMlPerDay} />
+          </div>
+          <div>
+            <label class={label} for="proteinG">Proteína (g)</label>
+            <input id="proteinG" name="proteinG" type="number" min="0" max="400" step="1"
+              class={field} value={goals.proteinG} />
+          </div>
+          <div>
+            <label class={label} for="kcalTraining">Kcal día de entreno</label>
+            <input id="kcalTraining" name="kcalTraining" type="number" min="0" max="6000" step="10"
+              class={field} value={goals.kcalTraining} />
+          </div>
+          <div>
+            <label class={label} for="kcalRest">Kcal día de descanso</label>
+            <input id="kcalRest" name="kcalRest" type="number" min="0" max="6000" step="10"
+              class={field} value={goals.kcalRest} />
+          </div>
+          <div>
+            <label class={label} for="carbsTrainingG">Carbos entreno (g)</label>
+            <input id="carbsTrainingG" name="carbsTrainingG" type="number" min="0" max="800" step="5"
+              class={field} value={goals.carbsTrainingG} />
+          </div>
+          <div>
+            <label class={label} for="carbsRestG">Carbos descanso (g)</label>
+            <input id="carbsRestG" name="carbsRestG" type="number" min="0" max="800" step="5"
+              class={field} value={goals.carbsRestG} />
+          </div>
+          <div>
+            <label class={label} for="fatG">Grasa (g)</label>
+            <input id="fatG" name="fatG" type="number" min="0" max="300" step="1"
+              class={field} value={goals.fatG} />
+          </div>
+          <div>
+            <label class={label} for="target5k">Meta 5K (mm:ss)</label>
+            <input id="target5k" name="target5k" type="text" class={field}
+              value={`${Math.floor(goals.target5kSeconds / 60)}:${String(goals.target5kSeconds % 60).padStart(2, "0")}`}
+              placeholder="28:45" />
+            <p class="mt-1.5 text-[11px] text-muted2">
+              Marca de partida: {Math.floor(baselines.fiveKSeconds / 60)}:{String(baselines.fiveKSeconds % 60).padStart(2, "0")}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <p id="form-error" class="hidden text-sm text-orange" role="alert"></p>
+
+      <button id="save-btn" type="submit"
+        class="w-full rounded-lg bg-blue py-3 text-base font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50">
+        Guardar cambios
+      </button>
+    </form>
+  </div>
+</Layout>
+
+<script>
+  const form = document.getElementById("profile-form") as HTMLFormElement;
+  const errorEl = document.getElementById("form-error")!;
+  const btn = document.getElementById("save-btn") as HTMLButtonElement;
+
+  const value = (name: string) =>
+    (form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement).value.trim();
+
+  /** `mm:ss` a segundos. Devuelve null si no encaja, para poder avisar. */
+  function paceToSeconds(text: string): number | null {
+    const match = /^(\d{1,3}):([0-5]\d)$/.exec(text);
+    if (!match) return null;
+    return Number(match[1]) * 60 + Number(match[2]);
+  }
+
+  function showError(message: string) {
+    errorEl.textContent = message;
+    errorEl.classList.remove("hidden");
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorEl.classList.add("hidden");
+
+    const displayName = value("displayName");
+    if (!displayName) return showError("Escribe tu nombre.");
+
+    const planStartDate = value("planStartDate");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(planStartDate)) {
+      return showError("Elige la fecha de inicio del plan.");
+    }
+
+    const target5kSeconds = paceToSeconds(value("target5k"));
+    if (target5kSeconds === null) {
+      return showError("La meta de 5K debe tener el formato mm:ss, por ejemplo 28:45.");
+    }
+
+    // El navegador valida la zona horaria: una inválida rompería el cálculo de
+    // "hoy" en el servidor y con él todos los registros del día.
+    try {
+      new Intl.DateTimeFormat("en-CA", { timeZone: value("timezone") });
+    } catch {
+      return showError("La zona horaria no es válida. Ejemplo: America/Mexico_City");
+    }
+
+    const num = (name: string) => {
+      const raw = value(name);
+      return raw === "" ? null : Number(raw);
+    };
+
+    btn.disabled = true;
+    btn.textContent = "Guardando...";
+
+    const response = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        displayName,
+        heightCm: num("heightCm"),
+        startWeightKg: num("startWeightKg"),
+        displayUnit: value("displayUnit"),
+        timezone: value("timezone"),
+        planStartDate,
+        planWeeks: num("planWeeks"),
+        goals: {
+          waterMlPerDay: num("waterMlPerDay"),
+          proteinG: num("proteinG"),
+          carbsTrainingG: num("carbsTrainingG"),
+          carbsRestG: num("carbsRestG"),
+          fatG: num("fatG"),
+          kcalTraining: num("kcalTraining"),
+          kcalRest: num("kcalRest"),
+          target5kSeconds,
+        },
+      }),
+    });
+
+    btn.disabled = false;
+    btn.textContent = "Guardar cambios";
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}) as { error?: string });
+      return showError(body.error ?? "No se pudieron guardar los cambios.");
+    }
+
+    window.showToast?.("Ajustes guardados correctamente");
+    // Recarga para que la barra superior refleje el nuevo nombre y semana.
+    setTimeout(() => window.location.reload(), 900);
+  });
+</script>

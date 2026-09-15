@@ -1,15 +1,37 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import { planWeekFor, todayInTimezone } from "../lib/date";
 import MetricCard from "../components/MetricCard.astro";
 import SessionBadge from "../components/SessionBadge.astro";
 import DayPill from "../components/DayPill.astro";
 import WeekBar from "../components/WeekBar.astro";
 import Toast from "../components/Toast.astro";
+
+// El nombre y el plan salen del perfil, no de localStorage: el modal de
+// onboarding que escribía `trackfit_config` ya no existe, así que ese dato
+// nunca se rellenaba y el dashboard se quedaba en blanco.
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+const planWeeks = profile?.planWeeks ?? 12;
+const timezone = profile?.timezone ?? "America/Mexico_City";
+const today = todayInTimezone(timezone);
+const planStartDate = profile?.planStartDate ?? today;
+const planWeek = planWeekFor(planStartDate, today, planWeeks);
+const displayName = profile?.displayName || user.name || user.email;
 ---
 
-<Layout title="Dashboard" currentPage="dashboard">
+<Layout title="Dashboard" currentPage="inicio">
   <Toast />
-  <div class="px-4 py-6 lg:px-8 lg:py-8 max-w-4xl mx-auto" id="dashboard-root">
+  <div
+    class="px-4 py-6 lg:px-8 lg:py-8 max-w-4xl mx-auto"
+    id="dashboard-root"
+    data-name={displayName}
+    data-today={today}
+    data-plan-start={planStartDate}
+    data-plan-weeks={String(planWeeks)}
+    data-plan-week={String(planWeek)}
+  >
     <!-- Loading state -->
     <div id="dashboard-loading" class="text-muted text-sm">Cargando...</div>
     <!-- Content (hidden until JS runs) -->
@@ -74,7 +96,7 @@ import Toast from "../components/Toast.astro";
           <h2 class="text-xs text-muted uppercase tracking-wider">
             Últimas notas
           </h2>
-          <a href="/notes" class="text-xs text-blue hover:underline"
+          <a href="/notas" class="text-xs text-blue hover:underline"
             >Ver todas →</a
           >
         </div>
@@ -86,8 +108,6 @@ import Toast from "../components/Toast.astro";
 
 <script>
   import {
-    getConfig,
-    getCurrentWeek,
     getSessionTypeForDate,
     getSession,
     getStreak,
@@ -107,30 +127,28 @@ import Toast from "../components/Toast.astro";
   }
 
   function init() {
-    const config = getConfig();
+    const root = document.getElementById("dashboard-root")!;
     const loading = document.getElementById("dashboard-loading")!;
     const content = document.getElementById("dashboard-content")!;
-    if (!config) {
-      loading.textContent = "";
-      content.classList.remove("hidden");
-      return;
-    }
+
+    // Los datos del plan vienen resueltos del servidor en data-attributes.
+    const name = root.dataset.name || "";
+    const todayStr = root.dataset.today!;
+    const planWeeks = Number(root.dataset.planWeeks) || 12;
+    const week = Number(root.dataset.planWeek) || 1;
+
     loading.remove();
     content.classList.remove("hidden");
 
-    const today = new Date();
-    const hour = today.getHours();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = toDateStr(today);
-    const week = getCurrentWeek();
+    const today = new Date(todayStr + "T00:00:00");
+    const hour = new Date().getHours();
     const plan = getSessionTypeForDate(todayStr);
     const todaySession = getSession(todayStr);
 
     // Greeting
     const greeting =
       hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
-    document.getElementById("hero-greeting")!.textContent =
-      `${greeting}, ${config.name}`;
+    document.getElementById("hero-greeting")!.textContent = `${greeting}, ${name}`;
 
     // Date
     const dateFmt = new Intl.DateTimeFormat("es-MX", {
@@ -143,17 +161,15 @@ import Toast from "../components/Toast.astro";
     document.getElementById("hero-date")!.textContent =
       dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
-    // Phase
-    const phases: [number, string][] = [
-      [4, "Base"],
-      [8, "Construcción"],
-      [12, "Intensificación"],
-      [16, "Peak & Taper"],
-    ];
-    const phase = phases.find(([w]) => week <= w)?.[1] || "Peak & Taper";
-    const badgeRow = document.getElementById("hero-badge-row")!;
-    badgeRow.innerHTML = `
-      <span class="text-xs bg-surface2 text-muted px-3 py-1 rounded-full">Semana ${week} · Fase ${phase}</span>
+    // Bloques de 4 semanas (rutina.md §4C). La cuarta es de descarga, y eso
+    // cambia cómo hay que entrenar ese día, así que se avisa.
+    const BLOCK_LABELS = ["Introducción", "Acumulación", "Intensificación", "Descarga"];
+    const blockWeek = ((week - 1) % 4) + 1;
+    const phase = BLOCK_LABELS[blockWeek - 1]!;
+    const isDeload = blockWeek === 4;
+    document.getElementById("hero-badge-row")!.innerHTML = `
+      <span class="text-xs bg-surface2 text-muted px-3 py-1 rounded-full">Semana ${week} · ${phase}</span>
+      ${isDeload ? '<span class="text-xs px-3 py-1 rounded-full bg-orange/15 text-orange border border-orange/30">Semana de descarga</span>' : ""}
     `;
 
     // Session type
@@ -176,12 +192,11 @@ import Toast from "../components/Toast.astro";
       `/day/?date=${todayStr}`;
 
     // Week bar
-    const planStart = new Date(config.startDate + "T00:00:00");
-    planStart.setHours(0, 0, 0, 0);
+    const planStart = new Date(root.dataset.planStart + "T00:00:00");
     const daysElapsed = Math.floor(
       (today.getTime() - planStart.getTime()) / (1000 * 60 * 60 * 24),
     );
-    const daysRemaining = Math.max(0, 16 * 7 - daysElapsed);
+    const daysRemaining = Math.max(0, planWeeks * 7 - daysElapsed);
     const daysLabel =
       daysRemaining === 0
         ? "¡Plan completado!"
@@ -190,11 +205,11 @@ import Toast from "../components/Toast.astro";
     document.getElementById("week-bar-wrapper")!.innerHTML = `
       <div class="space-y-1.5">
         <div class="flex items-center justify-between text-xs">
-          <span class="text-muted">Semana <strong class="text-primary">${week}</strong> de 16</span>
+          <span class="text-muted">Semana <strong class="text-primary">${week}</strong> de ${planWeeks}</span>
           <span class="text-muted">${phase}</span>
         </div>
         <div class="h-1.5 bg-surface2 rounded-full overflow-hidden">
-          <div class="h-full bg-blue rounded-full transition-all duration-500" style="width:${Math.round((week / 16) * 100)}%"></div>
+          <div class="h-full bg-blue rounded-full transition-all duration-500" style="width:${Math.round((week / planWeeks) * 100)}%"></div>
         </div>
         <div class="text-[11px] text-muted2 text-right">${daysLabel}</div>
       </div>
@@ -289,7 +304,7 @@ import Toast from "../components/Toast.astro";
         <div class="bg-surface border border-border rounded-xl p-6 text-center">
           <svg class="w-8 h-8 text-muted2 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
           <p class="text-sm text-muted">No hay notas aún.</p>
-          <a href="/notes" class="text-xs text-yellow mt-1 inline-block hover:underline">Crear primera nota →</a>
+          <a href="/notas" class="text-xs text-yellow mt-1 inline-block hover:underline">Crear primera nota →</a>
         </div>
       `;
     } else {
@@ -303,7 +318,7 @@ import Toast from "../components/Toast.astro";
             (n.content || "").slice(0, 80) +
             ((n.content || "").length > 80 ? "…" : "");
           return `
-          <a href="/notes" class="block bg-surface border border-border rounded-xl p-4 hover:border-border2 transition-colors">
+          <a href="/notas" class="block bg-surface border border-border rounded-xl p-4 hover:border-border2 transition-colors">
             <div class="flex items-start justify-between gap-2">
               <h3 class="text-sm font-semibold text-primary truncate">${escapeHtml(n.title || "Sin título")}</h3>
               <span class="text-[10px] text-muted2 shrink-0">${noteDate}</span>

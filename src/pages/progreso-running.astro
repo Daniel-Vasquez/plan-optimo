@@ -1,0 +1,22 @@
+---
+import Layout from "../layouts/Layout.astro";
+import ComingSoon from "../components/ComingSoon.astro";
+---
+
+<Layout title="Running" currentPage="running">
+  <ComingSoon
+    title="Running"
+    icon="running"
+    tanda={4}
+    description="Registro de carreras y progresión de tiempo, distancia y ritmo contra las zonas objetivo del plan."
+    features={[
+      "Alta de sesiones VO₂máx, umbral, fácil, tirada larga y contrarreloj",
+      "Desglose por intervalos con el ritmo de cada repetición",
+      "Ritmo en el tiempo sobre las bandas objetivo de rutina.md",
+      "Distribución del volumen por zona de intensidad",
+      "Proyección de 5K desde la marca de partida hasta la meta",
+    ]}
+    legacyHref="/progress"
+    legacyLabel="las gráficas actuales de ritmo, distancia y agua siguen disponibles"
+  />
+</Layout>

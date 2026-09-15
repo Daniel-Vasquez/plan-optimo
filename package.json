@@ -8,7 +8,8 @@
     "preview": "astro preview",
     "check": "astro check",
     "db:indexes": "node --env-file=.env scripts/db-indexes.mjs",
-    "db:set-password": "node --env-file=.env scripts/set-password.mjs"
+    "db:set-password": "node --env-file=.env scripts/set-password.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@astrojs/vercel": "^11.0.10",
@@ -21,7 +22,8 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@types/node": "^26.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
   },
   "allowScripts": {
     "esbuild": true,

@@ -1,0 +1,40 @@
+---
+import Icon, { type IconName } from './Icon.astro';
+
+/**
+ * Destino de la navegación principal.
+ *
+ * En escritorio muestra icono + texto; en móvil sólo el icono. El texto no se
+ * elimina del DOM, se oculta con `hidden lg:inline`, y el enlace lleva siempre
+ * `aria-label`: un lector de pantalla tiene que poder nombrar el destino
+ * aunque visualmente sólo haya un dibujo.
+ */
+export interface Props {
+  href: string;
+  label: string;
+  icon: IconName;
+  current?: boolean;
+}
+
+const { href, label, icon, current = false } = Astro.props;
+---
+
+<a
+  href={href}
+  aria-label={label}
+  aria-current={current ? 'page' : undefined}
+  class:list={[
+    'group relative flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors lg:px-3',
+    current ? 'text-primary' : 'text-muted hover:text-primary hover:bg-surface2',
+  ]}
+>
+  <Icon name={icon} class="w-5 h-5 shrink-0" />
+  <span class="hidden lg:inline whitespace-nowrap">{label}</span>
+  {/* Subrayado del destino activo; en móvil es la única señal visual además del color. */}
+  {current && (
+    <span
+      class="absolute inset-x-1.5 -bottom-px h-0.5 rounded-full bg-yellow"
+      aria-hidden="true"
+    ></span>
+  )}
+</a>

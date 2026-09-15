@@ -2,7 +2,7 @@
 
 Aplicación web de seguimiento de fitness, rendimiento físico y nutrición, construida sobre el plan de recomposición + 5K de 12 semanas descrito en [`rutina.md`](./rutina.md).
 
-> **Estado:** en migración (Tanda 1 de 8 completada). La app ya es multiusuario: renderiza en servidor, guarda en MongoDB y exige sesión. Los módulos de fitness siguen leyendo de `localStorage` hasta que cada tanda los migre. El plan completo está en [`planificacion.md`](./planificacion.md).
+> **Estado:** en migración (Tandas 1 y 2 de 8 completadas). La app ya es multiusuario: renderiza en servidor, guarda en MongoDB y exige sesión. Los módulos de fitness siguen leyendo de `localStorage` hasta que cada tanda los migre. El plan completo está en [`planificacion.md`](./planificacion.md).
 
 ## Stack
 
@@ -27,6 +27,7 @@ Aplicación web de seguimiento de fitness, rendimiento físico y nutrición, con
 | `npm run dev` | Servidor de desarrollo en http://localhost:4321 |
 | `npm run build` | Build de producción para Vercel |
 | `npm run check` | Typecheck con `astro check` |
+| `npm test` | Pruebas unitarias con Vitest |
 | `npm run db:indexes` | Crea los índices de Mongo (idempotente) |
 | `npm run db:set-password -- <email>` | Cambia la contraseña de una cuenta |
 

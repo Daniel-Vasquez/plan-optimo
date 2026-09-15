@@ -1,0 +1,20 @@
+---
+import Layout from "../layouts/Layout.astro";
+import ComingSoon from "../components/ComingSoon.astro";
+---
+
+<Layout title="Fuerza" currentPage="fuerza">
+  <ComingSoon
+    title="Fuerza"
+    icon="fuerza"
+    tanda={5}
+    description="Ejecución y registro de las sesiones A, B y C de rutina.md, con las series realizadas frente a las asignadas."
+    features={[
+      "Series y repeticiones reales contra las prescritas, ejercicio por ejercicio",
+      "Temporizador de descanso con la duración de cada ejercicio",
+      "Escalera de densificación de 10 peldaños cuando se acaba el peso",
+      "Detección de semana de descarga dentro del bloque de 4 semanas",
+      "Gráficas de volumen, e1RM estimado y cumplimiento por sesión",
+    ]}
+  />
+</Layout>

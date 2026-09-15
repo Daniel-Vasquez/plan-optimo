@@ -1,0 +1,82 @@
+---
+import NavLink from './NavLink.astro';
+import UserMenu from './UserMenu.astro';
+import Icon from './Icon.astro';
+import type { IconName } from './Icon.astro';
+
+/**
+ * Barra de navegación fija superior.
+ *
+ * Sustituye a la barra lateral de escritorio y a la barra inferior de móvil,
+ * que eran dos estructuras distintas manteniendo la misma lista de destinos
+ * duplicada. Ahora hay una sola.
+ *
+ * Con siete destinos, en móvil los iconos no caben siempre: la tira de
+ * navegación desplaza en horizontal en vez de esconder destinos en un menú
+ * "más", donde nadie los encuentra.
+ */
+export interface Props {
+  currentPage?: string;
+  userName: string;
+  userEmail: string;
+  weekBadge?: string;
+}
+
+const { currentPage = '', userName, userEmail, weekBadge = '' } = Astro.props;
+
+const DESTINATIONS: { id: string; href: string; label: string; icon: IconName }[] = [
+  { id: 'inicio', href: '/', label: 'Inicio', icon: 'inicio' },
+  { id: 'fuerza', href: '/fuerza', label: 'Fuerza', icon: 'fuerza' },
+  { id: 'running', href: '/progreso-running', label: 'Running', icon: 'running' },
+  { id: 'nutricion', href: '/nutricion', label: 'Nutrición', icon: 'nutricion' },
+  { id: 'agua', href: '/hidratacion', label: 'Agua', icon: 'agua' },
+  { id: 'calendario', href: '/calendario', label: 'Calendario', icon: 'calendario' },
+  { id: 'notas', href: '/notas', label: 'Notas', icon: 'notas' },
+];
+---
+
+<header
+  class="fixed top-0 right-0 left-0 z-50 h-14 border-b border-border bg-surface lg:h-16"
+>
+  <div class="mx-auto flex h-full max-w-7xl items-center gap-2 px-3 lg:gap-4 lg:px-6">
+    <a
+      href="/"
+      class="shrink-0 font-display text-2xl tracking-wider text-yellow lg:text-3xl"
+      aria-label="TrackFit, ir al inicio"
+    >
+      TRACKFIT
+    </a>
+
+    <nav
+      aria-label="Navegación principal"
+      class="scrollbar-hide flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:justify-center lg:gap-1"
+    >
+      {
+        DESTINATIONS.map((d) => (
+          <NavLink href={d.href} label={d.label} icon={d.icon} current={currentPage === d.id} />
+        ))
+      }
+    </nav>
+
+    <div class="flex shrink-0 items-center gap-1">
+      {weekBadge && (
+        <span
+          class="hidden rounded-full bg-surface2 px-2.5 py-1 text-xs text-muted lg:inline"
+          >{weekBadge}</span
+        >
+      )}
+
+      <button
+        type="button"
+        onclick="toggleTheme()"
+        aria-label="Cambiar tema"
+        class="theme-toggle-btn rounded-lg p-1.5 text-muted transition-colors hover:bg-surface2 hover:text-primary"
+      >
+        <Icon name="sol" class="icon-sun w-5 h-5" />
+        <Icon name="luna" class="icon-moon w-5 h-5" />
+      </button>
+
+      <UserMenu name={userName} email={userEmail} weekBadge={weekBadge} />
+    </div>
+  </div>
+</header>
