@@ -7,7 +7,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "db:indexes": "node --env-file=.env scripts/db-indexes.mjs"
+    "db:indexes": "node --env-file=.env scripts/db-indexes.mjs",
+    "db:set-password": "node --env-file=.env scripts/set-password.mjs"
   },
   "dependencies": {
     "@astrojs/vercel": "^11.0.10",

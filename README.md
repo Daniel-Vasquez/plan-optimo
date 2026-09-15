@@ -28,12 +28,23 @@ Aplicación web de seguimiento de fitness, rendimiento físico y nutrición, con
 | `npm run build` | Build de producción para Vercel |
 | `npm run check` | Typecheck con `astro check` |
 | `npm run db:indexes` | Crea los índices de Mongo (idempotente) |
+| `npm run db:set-password -- <email>` | Cambia la contraseña de una cuenta |
 
 ## Autenticación
 
 Email + contraseña, sin OAuth. Better Auth gestiona las colecciones `user`,
 `account`, `session` y `verification`; el perfil físico vive aparte en
 `profiles`.
+
+No hay proveedor de correo configurado, así que tampoco hay flujo de "he
+olvidado mi contraseña". Para recuperar el acceso a una cuenta:
+
+```bash
+npm run db:set-password -- tu@email.com
+```
+
+Pide la contraseña sin eco, la hashea igual que Better Auth y cierra las
+sesiones abiertas.
 
 El aislamiento entre usuarios se apoya en cuatro capas (detalle en
 `planificacion.md` §1.5):
