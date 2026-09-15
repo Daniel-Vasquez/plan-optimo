@@ -2,7 +2,7 @@
 
 > **Documento de arquitectura y hoja de ruta.** Fase 1: análisis y planificación. No se ha escrito ni modificado código de aplicación.
 > **Fuentes del análisis:** estructura real del repositorio (`src/`, `astro.config.mjs`, `package.json`, `tailwind.config.js`) y el plan de entrenamiento `rutina.md`.
-> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-3 ✅ completadas · siguiente: Tanda 4 (running).
+> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-4 ✅ completadas · siguiente: Tanda 5 (plan y fuerza).
 
 ---
 
@@ -637,7 +637,7 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 ---
 
-### Tanda 4 — Running y `/progreso-running`
+### Tanda 4 — Running y `/progreso-running` ✅ *completada*
 
 **Objetivo:** registrar carreras y ver la progresión de tiempo, distancia y ritmo.
 
@@ -651,7 +651,16 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 **Archivos a crear:** `src/pages/progreso-running.astro`, `src/pages/running/nueva.astro`, `src/pages/running/[id].astro`, `src/components/running/RunForm.astro`, `src/components/running/IntervalTable.astro`, `src/components/running/PaceChart.astro`, `src/components/charts/BarChart.astro`, `src/components/charts/DonutChart.astro`, `src/lib/db/repos/running.ts`, `src/lib/pace.ts`, `src/pages/api/running.ts`
 **Archivos a modificar:** `src/components/LineChart.astro`, `src/pages/progress.astro` (se divide), `package.json` (`chart.js`)
 
-**Requiero de tu lado:** confirmar si tus carreras vienen de un reloj/Strava. Si quieres importación automática más adelante, lo dejo como tanda opcional al final; de momento el registro es manual.
+**Notas de ejecución**
+- Ritmo, objetivo y desviación se calculan **en el servidor** y se persisten. El objetivo se congela al registrar: si mañana cambian las zonas, el histórico sigue mostrando contra qué se comparó cada sesión.
+- Cuatro gráficas en vez de cinco: "tiempo total por semana" era redundante con el volumen, así que vive en el tooltip de esa gráfica y en los récords.
+- La paleta categórica de los tipos de sesión está **validada con script** (banda de luminosidad, chroma, separación para daltonismo y contraste) contra las dos superficies del tema. El orden de los colores es el que hace que los pares adyacentes se distingan: no se reordena ni se cicla.
+- Las bandas de zona son lo que convierte la gráfica de ritmo en un diagnóstico. Fácil y tirada larga comparten zona (7:15-7:45), así que la banda se rotula con ambos nombres.
+- La proyección de 5K excluye rodajes fáciles **y tiradas largas**: se corren suave por diseño, y una tirada de 12 km a 7:30 proyectaba un 5K de 35:35 que hundía la línea.
+- Chart.js pasa de CDN a dependencia. Se retiran `/progress` y `LineChart.astro`, ya superados por `/progreso-running` e `/hidratacion`; con ellos desaparece la última carga desde CDN y 21 errores de tipos heredados.
+- 19 pruebas nuevas sobre ritmos, zonas, fatiga y agregaciones (103 en total).
+
+**Pendiente de tu lado:** confirmar si quieres importación desde reloj/Strava más adelante. De momento el registro es manual.
 
 ---
 

@@ -25,6 +25,7 @@ export const COLLECTIONS = {
   // Dominio
   profiles: 'profiles',
   waterLogs: 'water_logs',
+  runningSessions: 'running_sessions',
 } as const;
 
 /**
@@ -56,6 +57,15 @@ export async function ensureIndexes(db: Db): Promise<string[]> {
     await db
       .collection(COLLECTIONS.waterLogs)
       .createIndex({ userId: 1, date: -1 }, { unique: true, name: 'userId_date_unique' }),
+  );
+
+  // Aquí NO es único por fecha: se puede correr dos veces el mismo día
+  // (martes hay intervalos por la mañana y el plan admite rodajes sueltos).
+  const runs = db.collection(COLLECTIONS.runningSessions);
+  created.push(await runs.createIndex({ userId: 1, date: -1 }, { name: 'userId_date' }));
+  // Para las gráficas filtradas por tipo de sesión.
+  created.push(
+    await runs.createIndex({ userId: 1, runType: 1, date: -1 }, { name: 'userId_runType_date' }),
   );
 
   return created;

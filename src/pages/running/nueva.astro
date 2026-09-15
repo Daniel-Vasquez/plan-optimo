@@ -1,0 +1,313 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Toast from "../../components/Toast.astro";
+import { getProfile } from "../../lib/db/repos/profiles";
+import { todayInTimezone } from "../../lib/date";
+import { PACE_ZONES, RUN_TYPE_LABELS } from "../../lib/pace";
+import { RUN_TYPE_ORDER } from "../../lib/run-stats";
+
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+const today = todayInTimezone(profile?.timezone ?? "America/Mexico_City");
+
+// Las zonas viajan al cliente para poder avisar EN VIVO de si el ritmo que se
+// está tecleando cae fuera de la zona del tipo elegido.
+const zones = Object.fromEntries(
+  RUN_TYPE_ORDER.concat("race").map((type) => [
+    type,
+    PACE_ZONES[type]
+      ? { min: PACE_ZONES[type]!.minSeconds, max: PACE_ZONES[type]!.maxSeconds }
+      : null,
+  ]),
+);
+
+const field =
+  "w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-blue/50 transition-colors";
+const label = "block text-xs text-muted uppercase tracking-wider mb-1.5";
+---
+
+<Layout title="Nueva carrera" currentPage="running">
+  <Toast />
+  <div class="mx-auto max-w-2xl px-4 py-6 lg:px-8 lg:py-8">
+    <a
+      href="/progreso-running"
+      class="mb-3 inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-primary"
+    >
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        ><polyline points="15 18 9 12 15 6"></polyline></svg
+      >
+      Progreso de running
+    </a>
+    <h1 class="mb-6 font-display text-3xl text-primary">NUEVA CARRERA</h1>
+
+    <form id="run-form" class="space-y-5" data-zones={JSON.stringify(zones)} novalidate>
+      <section class="space-y-4 rounded-xl border border-border2 bg-surface p-6">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class={label} for="date">Fecha</label>
+            <input id="date" name="date" type="date" class={field} value={today} />
+          </div>
+          <div>
+            <label class={label} for="runType">Tipo de sesión</label>
+            <select id="runType" name="runType" class={field}>
+              {
+                RUN_TYPE_ORDER.concat("race").map((type) => (
+                  <option value={type} selected={type === "easy"}>
+                    {RUN_TYPE_LABELS[type]}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class={label} for="distanceKm">Distancia (km)</label>
+            <input id="distanceKm" name="distanceKm" type="number" min="0.1" max="500" step="0.01"
+              class={field} placeholder="10.0" />
+          </div>
+          <div>
+            <label class={label} for="duration">Duración</label>
+            <input id="duration" name="duration" type="text" class={field} placeholder="mm:ss o h:mm:ss" />
+          </div>
+        </div>
+
+        <!-- Ritmo calculado en vivo: es el dato que se quiere ver al teclear,
+             y esperar a guardar para conocerlo rompe el ciclo de registro. -->
+        <div
+          id="pace-preview"
+          class="rounded-lg border border-border bg-surface2 px-4 py-3 text-sm text-muted"
+        >
+          Escribe distancia y duración para ver el ritmo.
+        </div>
+      </section>
+
+      <section class="space-y-4 rounded-xl border border-border2 bg-surface p-6">
+        <h2 class="text-sm font-semibold text-primary">Detalles (opcional)</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class={label} for="avgHeartRate">FC media</label>
+            <input id="avgHeartRate" name="avgHeartRate" type="number" min="30" max="250" class={field} placeholder="162" />
+          </div>
+          <div>
+            <label class={label} for="maxHeartRate">FC máxima</label>
+            <input id="maxHeartRate" name="maxHeartRate" type="number" min="30" max="250" class={field} placeholder="178" />
+          </div>
+          <div>
+            <label class={label} for="elevationGainM">Desnivel (m)</label>
+            <input id="elevationGainM" name="elevationGainM" type="number" min="0" max="10000" class={field} placeholder="45" />
+          </div>
+          <div>
+            <label class={label} for="perceivedEffort">Esfuerzo (1-10)</label>
+            <input id="perceivedEffort" name="perceivedEffort" type="number" min="1" max="10" class={field} placeholder="8" />
+          </div>
+        </div>
+        <div>
+          <label class={label} for="shoes">Calzado</label>
+          <input id="shoes" name="shoes" type="text" maxlength="60" class={field} placeholder="Pegasus 40" />
+        </div>
+        <div>
+          <label class={label} for="note">Nota</label>
+          <textarea id="note" name="note" rows="2" maxlength="1000" class={`${field} resize-none`}
+            placeholder="¿Cómo te sentiste?"></textarea>
+        </div>
+      </section>
+
+      <!-- Intervalos: sólo tienen sentido en sesiones de series, así que la
+           sección aparece únicamente al elegir VO₂máx o umbral. -->
+      <section id="intervals-section" class="hidden space-y-4 rounded-xl border border-border2 bg-surface p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-primary">Repeticiones</h2>
+          <button type="button" id="add-interval"
+            class="rounded-lg bg-surface2 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-border2">
+            + Añadir
+          </button>
+        </div>
+        <div id="intervals-list" class="space-y-2"></div>
+        <p class="text-[11px] text-muted2">
+          El ritmo de cada repetición se calcula solo al escribir distancia y tiempo.
+        </p>
+      </section>
+
+      <p id="form-error" class="hidden text-sm text-orange" role="alert"></p>
+
+      <button id="save-btn" type="submit"
+        class="w-full rounded-lg bg-blue py-3 text-base font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50">
+        Guardar carrera
+      </button>
+    </form>
+  </div>
+</Layout>
+
+<script>
+  import { formatPace, parseDuration, paceSecondsPerKm } from "../../lib/pace";
+
+  interface Zone { min: number; max: number }
+
+  function init() {
+    const form = document.getElementById("run-form") as HTMLFormElement | null;
+    if (!form) return;
+
+    const zones: Record<string, Zone | null> = JSON.parse(form.dataset.zones!);
+    const errorEl = document.getElementById("form-error")!;
+    const preview = document.getElementById("pace-preview")!;
+    const btn = document.getElementById("save-btn") as HTMLButtonElement;
+    const intervalsSection = document.getElementById("intervals-section")!;
+    const intervalsList = document.getElementById("intervals-list")!;
+
+    const el = <T extends HTMLElement>(name: string) => form.elements.namedItem(name) as T;
+
+    function showError(message: string) {
+      errorEl.textContent = message;
+      errorEl.classList.remove("hidden");
+    }
+
+    /** Repinta el ritmo y lo compara con la zona del tipo elegido. */
+    function updatePace() {
+      const distanceKm = Number(el<HTMLInputElement>("distanceKm").value);
+      const seconds = parseDuration(el<HTMLInputElement>("duration").value);
+      const runType = el<HTMLSelectElement>("runType").value;
+
+      const pace = seconds === null ? null : paceSecondsPerKm(distanceKm, seconds);
+      if (pace === null) {
+        preview.className = "rounded-lg border border-border bg-surface2 px-4 py-3 text-sm text-muted";
+        preview.textContent = "Escribe distancia y duración para ver el ritmo.";
+        return;
+      }
+
+      const zone = zones[runType];
+      let verdict = "";
+      let tone = "border-border bg-surface2 text-muted";
+
+      if (zone) {
+        if (pace < zone.min) {
+          verdict = ` · más rápido que la zona (${formatPace(zone.min)}-${formatPace(zone.max)})`;
+          tone = "border-orange/30 bg-orange/10 text-orange";
+        } else if (pace > zone.max) {
+          verdict = ` · más lento que la zona (${formatPace(zone.min)}-${formatPace(zone.max)})`;
+          tone = "border-orange/30 bg-orange/10 text-orange";
+        } else {
+          verdict = " · dentro de la zona objetivo";
+          tone = "border-blue/30 bg-blue/10 text-blue";
+        }
+      }
+
+      preview.className = `rounded-lg border px-4 py-3 text-sm ${tone}`;
+      preview.innerHTML = `<strong class="text-base">${formatPace(pace)} min/km</strong>${verdict}`;
+    }
+
+    /** Muestra la sección de repeticiones sólo donde tiene sentido. */
+    function updateIntervalsVisibility() {
+      const runType = el<HTMLSelectElement>("runType").value;
+      const relevant = runType === "vo2max" || runType === "threshold";
+      intervalsSection.classList.toggle("hidden", !relevant);
+    }
+
+    let intervalCount = 0;
+    function addIntervalRow() {
+      intervalCount += 1;
+      const row = document.createElement("div");
+      row.className = "interval-row grid grid-cols-[auto_1fr_1fr_1fr_auto] items-center gap-2";
+      row.innerHTML = `
+        <span class="w-5 text-xs text-muted2 tabular-nums">${intervalCount}</span>
+        <input type="number" class="iv-distance w-full bg-surface2 border border-border2 rounded-lg px-2 py-2 text-sm text-primary placeholder:text-muted2 focus:outline-hidden focus:border-blue/50" placeholder="400 m" min="1" max="100000" />
+        <input type="text" class="iv-duration w-full bg-surface2 border border-border2 rounded-lg px-2 py-2 text-sm text-primary placeholder:text-muted2 focus:outline-hidden focus:border-blue/50" placeholder="2:20" />
+        <input type="number" class="iv-recovery w-full bg-surface2 border border-border2 rounded-lg px-2 py-2 text-sm text-primary placeholder:text-muted2 focus:outline-hidden focus:border-blue/50" placeholder="90 s rec" min="0" max="3600" />
+        <span class="iv-pace w-14 text-right text-xs text-muted tabular-nums">—</span>
+      `;
+      intervalsList.appendChild(row);
+
+      const distance = row.querySelector<HTMLInputElement>(".iv-distance")!;
+      const duration = row.querySelector<HTMLInputElement>(".iv-duration")!;
+      const paceCell = row.querySelector<HTMLElement>(".iv-pace")!;
+
+      const recalc = () => {
+        const meters = Number(distance.value);
+        const seconds = parseDuration(duration.value);
+        const pace = seconds === null ? null : paceSecondsPerKm(meters / 1000, seconds);
+        paceCell.textContent = pace === null ? "—" : formatPace(pace);
+      };
+      distance.addEventListener("input", recalc);
+      duration.addEventListener("input", recalc);
+    }
+
+    for (const name of ["distanceKm", "duration", "runType"]) {
+      el<HTMLElement>(name).addEventListener("input", updatePace);
+    }
+    el<HTMLSelectElement>("runType").addEventListener("change", updateIntervalsVisibility);
+    document.getElementById("add-interval")!.addEventListener("click", addIntervalRow);
+    updateIntervalsVisibility();
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorEl.classList.add("hidden");
+
+      const date = el<HTMLInputElement>("date").value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return showError("Elige la fecha de la carrera.");
+
+      const distanceKm = Number(el<HTMLInputElement>("distanceKm").value);
+      if (!Number.isFinite(distanceKm) || distanceKm <= 0) {
+        return showError("Escribe la distancia recorrida.");
+      }
+
+      const durationSeconds = parseDuration(el<HTMLInputElement>("duration").value);
+      if (durationSeconds === null) {
+        return showError("La duración debe ser mm:ss o h:mm:ss, por ejemplo 52:30.");
+      }
+
+      const num = (name: string) => {
+        const value = el<HTMLInputElement>(name).value;
+        return value === "" ? null : Number(value);
+      };
+
+      const intervals = [...intervalsList.querySelectorAll<HTMLElement>(".interval-row")]
+        .map((row) => {
+          const distanceM = Number(row.querySelector<HTMLInputElement>(".iv-distance")!.value);
+          const seconds = parseDuration(row.querySelector<HTMLInputElement>(".iv-duration")!.value);
+          const recovery = row.querySelector<HTMLInputElement>(".iv-recovery")!.value;
+          if (!Number.isFinite(distanceM) || distanceM <= 0 || seconds === null) return null;
+          return {
+            distanceM,
+            durationSeconds: seconds,
+            recoverySeconds: recovery === "" ? null : Number(recovery),
+          };
+        })
+        .filter((interval) => interval !== null);
+
+      btn.disabled = true;
+      btn.textContent = "Guardando...";
+
+      const response = await fetch("/api/running", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          date,
+          runType: el<HTMLSelectElement>("runType").value,
+          distanceKm,
+          durationSeconds,
+          avgHeartRate: num("avgHeartRate"),
+          maxHeartRate: num("maxHeartRate"),
+          elevationGainM: num("elevationGainM"),
+          perceivedEffort: num("perceivedEffort"),
+          shoes: el<HTMLInputElement>("shoes").value,
+          note: el<HTMLTextAreaElement>("note").value,
+          intervals,
+        }),
+      });
+
+      btn.disabled = false;
+      btn.textContent = "Guardar carrera";
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        return showError(body.error ?? "No se pudo guardar la carrera.");
+      }
+
+      window.showToast?.("Carrera guardada");
+      setTimeout(() => (window.location.href = "/progreso-running"), 800);
+    });
+  }
+
+  document.addEventListener("astro:page-load", init);
+</script>

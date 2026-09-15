@@ -16,6 +16,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.2",
     "better-auth": "^1.7.5",
+    "chart.js": "^4.5.1",
     "mongodb": "^7.6.0",
     "tailwindcss": "^4.3.3"
   },

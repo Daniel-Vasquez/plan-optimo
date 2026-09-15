@@ -127,3 +127,43 @@ export interface WaterLog extends BaseDoc {
   totalMl: number;
   entries: WaterEntry[];
 }
+
+/**
+ * Tipo de sesión de carrera.
+ *
+ * Los cuatro primeros son los del cronograma de `rutina.md §2`; `race` y
+ * `timetrial` cubren las contrarrelojes de 5K de las semanas 6 y 12.
+ */
+export type RunType = 'vo2max' | 'threshold' | 'easy' | 'long' | 'race' | 'timetrial';
+
+/** Una repetición dentro de una sesión de series. */
+export interface RunInterval {
+  index: number;
+  distanceM: number;
+  durationSeconds: number;
+  /** Derivado: segundos por kilómetro de esta repetición. */
+  paceSeconds: number;
+  recoverySeconds: number | null;
+}
+
+/** Una carrera registrada. */
+export interface RunningSession extends BaseDoc {
+  date: DateStr;
+  runType: RunType;
+  distanceKm: number;
+  durationSeconds: number;
+  /** Derivado de distancia y duración; se persiste para poder ordenar y graficar. */
+  avgPaceSeconds: number;
+  /** Ritmo objetivo de la zona del tipo de sesión, en el momento del registro. */
+  targetPaceSeconds: number | null;
+  /** Realizado menos objetivo. Positivo = más lento. Alimenta la alerta de fatiga. */
+  paceDeltaSeconds: number | null;
+  elevationGainM: number | null;
+  avgHeartRate: number | null;
+  maxHeartRate: number | null;
+  intervals: RunInterval[];
+  /** RPE de 1 a 10. */
+  perceivedEffort: number | null;
+  shoes: string | null;
+  note: string;
+}

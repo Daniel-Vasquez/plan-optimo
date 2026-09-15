@@ -1,0 +1,315 @@
+---
+/**
+ * Las gráficas de running.
+ *
+ * Van juntas en un componente porque comparten el mismo conjunto de sesiones y
+ * la misma inicialización de Chart.js; separarlas en cuatro archivos habría
+ * duplicado el arranque cuatro veces sin ganar nada.
+ */
+export interface Props {
+  /** Serializado: el script del cliente lo lee del data-attribute. */
+  payload: string;
+  hasData: boolean;
+}
+
+const { payload, hasData } = Astro.props;
+
+const card = 'rounded-xl border border-border2 bg-surface p-4 lg:p-6';
+---
+
+<div id="run-charts" data-payload={payload} class="space-y-5">
+  {
+    !hasData ? (
+      <div class={`${card} text-center`}>
+        <p class="py-10 text-sm text-muted">
+          Todavía no hay carreras registradas. Cuando añadas la primera, aquí aparecerán
+          el ritmo frente a las zonas objetivo, el volumen semanal y la proyección de 5K.
+        </p>
+      </div>
+    ) : (
+      <>
+        <section class={card}>
+          <h2 class="text-sm font-semibold text-primary">Ritmo frente a las zonas objetivo</h2>
+          <p class="mt-0.5 mb-4 text-xs text-muted">
+            Cada punto es una sesión. Las bandas son las zonas de rutina.md: un punto fuera
+            de su banda es una sesión corrida en la intensidad equivocada.
+          </p>
+          <div class="relative h-72"><canvas id="chart-pace"></canvas></div>
+        </section>
+
+        <section class={card}>
+          <h2 class="text-sm font-semibold text-primary">Volumen semanal</h2>
+          <p class="mt-0.5 mb-4 text-xs text-muted">
+            Kilómetros por semana. La franja marca el objetivo de 17-20 km.
+          </p>
+          <div class="relative h-64"><canvas id="chart-volume"></canvas></div>
+        </section>
+
+        <div class="grid gap-5 lg:grid-cols-2">
+          <section class={card}>
+            <h2 class="text-sm font-semibold text-primary">Reparto del volumen</h2>
+            <p class="mt-0.5 mb-4 text-xs text-muted">
+              Cuánto de lo que corres es realmente fácil.
+            </p>
+            <div class="relative h-60"><canvas id="chart-mix"></canvas></div>
+          </section>
+
+          <section class={card}>
+            <h2 class="text-sm font-semibold text-primary">Proyección de 5K</h2>
+            <p class="mt-0.5 mb-4 text-xs text-muted">
+              Contrarrelojes medidas y estimaciones desde otras distancias.
+            </p>
+            <div class="relative h-60"><canvas id="chart-5k"></canvas></div>
+          </section>
+        </div>
+      </>
+    )
+  }
+</div>
+
+<script>
+  import {
+    Chart,
+    BarController, BarElement,
+    LineController, LineElement, PointElement,
+    DoughnutController, ArcElement,
+    ScatterController,
+    CategoryScale, LinearScale,
+    Legend, Tooltip,
+  } from 'chart.js';
+  import {
+    axisStyle, edge, legendStyle, referenceLinePlugin, themeColor, tooltipStyle, zoneBandsPlugin,
+  } from '../../lib/charts';
+  import { formatDuration, formatPace } from '../../lib/pace';
+
+  // Registro selectivo: sólo lo que se usa, para no arrastrar toda la librería.
+  Chart.register(
+    BarController, BarElement,
+    LineController, LineElement, PointElement,
+    DoughnutController, ArcElement,
+    ScatterController,
+    CategoryScale, LinearScale,
+    Legend, Tooltip,
+  );
+
+  const instances: any[] = [];
+
+  function destroyAll() {
+    while (instances.length) instances.pop()?.destroy();
+  }
+
+  function shortDate(date: string) {
+    return new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short' })
+      .format(new Date(`${date}T00:00:00`));
+  }
+
+  function init() {
+    destroyAll();
+    const root = document.getElementById('run-charts');
+    if (!root?.dataset.payload) return;
+
+    const data = JSON.parse(root.dataset.payload);
+
+    // ── Ritmo frente a las zonas ──────────────────────────────────────────
+    const paceCanvas = document.getElementById('chart-pace') as HTMLCanvasElement | null;
+    if (paceCanvas && data.paceSeries?.length) {
+      // Una serie POR TIPO: así la leyenda nombra cada identidad y el color
+      // nunca es la única pista.
+      const datasets = data.paceSeries.map((series: any) => ({
+        label: series.label,
+        data: series.points.map((p: any) => ({ x: p.x, y: p.y, date: p.date })),
+        backgroundColor: series.color,
+        borderColor: series.color,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        // Anillo del color de la superficie para separar puntos solapados.
+        pointBorderColor: themeColor('surface'),
+        pointBorderWidth: 2,
+        showLine: false,
+      }));
+
+      instances.push(new Chart(paceCanvas, {
+        type: 'scatter',
+        data: { datasets },
+        plugins: [zoneBandsPlugin(data.zoneBands.map((b: any) => ({
+          ...b, color: edge(0.05),
+        })))],
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'linear',
+              ...axisStyle(),
+              ticks: {
+                ...axisStyle().ticks,
+                callback: (value: any) => shortDate(data.dateForIndex[value] ?? ''),
+                maxTicksLimit: 6,
+              },
+            },
+            y: {
+              // Invertida: menos segundos por km es ir más rápido, y arriba
+              // debe significar mejor.
+              reverse: true,
+              ...axisStyle(),
+              ticks: { ...axisStyle().ticks, callback: (v: any) => formatPace(v) },
+            },
+          },
+          plugins: {
+            legend: legendStyle(),
+            tooltip: {
+              ...tooltipStyle(),
+              callbacks: {
+                title: (items: any) => shortDate(items[0].raw.date),
+                label: (item: any) => ` ${item.dataset.label}: ${formatPace(item.raw.y)} min/km`,
+              },
+            },
+          },
+        },
+      }));
+    }
+
+    // ── Volumen semanal ───────────────────────────────────────────────────
+    const volumeCanvas = document.getElementById('chart-volume') as HTMLCanvasElement | null;
+    if (volumeCanvas && data.weeks?.length) {
+      instances.push(new Chart(volumeCanvas, {
+        type: 'bar',
+        data: {
+          labels: data.weeks.map((w: any) => shortDate(w.week)),
+          datasets: [{
+            label: 'Kilómetros',
+            data: data.weeks.map((w: any) => w.distanceKm),
+            backgroundColor: data.volumeColor,
+            borderRadius: 4,
+            borderSkipped: false,
+            // Hueco de 2px entre barras contiguas.
+            barPercentage: 0.9,
+            categoryPercentage: 0.88,
+          }],
+        },
+        plugins: [
+          referenceLinePlugin(data.volumeTarget.minKm, `${data.volumeTarget.minKm} km`),
+          referenceLinePlugin(data.volumeTarget.maxKm, `${data.volumeTarget.maxKm} km`),
+        ],
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: axisStyle(),
+            y: { beginAtZero: true, ...axisStyle() },
+          },
+          plugins: {
+            // Una sola serie: el título ya la nombra, la leyenda sobraría.
+            legend: { display: false },
+            tooltip: {
+              ...tooltipStyle(),
+              callbacks: {
+                label: (item: any) => {
+                  const week = data.weeks[item.dataIndex];
+                  return [
+                    ` ${week.distanceKm} km`,
+                    ` ${week.sessions} ${week.sessions === 1 ? 'sesión' : 'sesiones'}`,
+                    ` ${formatDuration(week.durationSeconds)} en total`,
+                  ];
+                },
+              },
+            },
+          },
+        },
+      }));
+    }
+
+    // ── Reparto del volumen ───────────────────────────────────────────────
+    const mixCanvas = document.getElementById('chart-mix') as HTMLCanvasElement | null;
+    if (mixCanvas && data.mix?.length) {
+      instances.push(new Chart(mixCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: data.mix.map((m: any) => m.label),
+          datasets: [{
+            data: data.mix.map((m: any) => m.distanceKm),
+            backgroundColor: data.mix.map((m: any) => m.color),
+            // Separación del color de la superficie entre porciones.
+            borderColor: themeColor('surface'),
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: legendStyle(),
+            tooltip: {
+              ...tooltipStyle(),
+              callbacks: {
+                label: (item: any) => {
+                  const slice = data.mix[item.dataIndex];
+                  return ` ${slice.distanceKm} km · ${slice.pct}%`;
+                },
+              },
+            },
+          },
+        },
+      }));
+    }
+
+    // ── Proyección de 5K ──────────────────────────────────────────────────
+    const fiveKCanvas = document.getElementById('chart-5k') as HTMLCanvasElement | null;
+    if (fiveKCanvas && data.fiveK?.length) {
+      instances.push(new Chart(fiveKCanvas, {
+        type: 'line',
+        data: {
+          labels: data.fiveK.map((p: any) => shortDate(p.date)),
+          datasets: [{
+            label: '5K estimado',
+            data: data.fiveK.map((p: any) => p.seconds),
+            borderColor: data.fiveKColor,
+            backgroundColor: data.fiveKColor,
+            borderWidth: 2,
+            tension: 0.3,
+            // Las contrarrelojes medidas se marcan más grandes: no son
+            // estimaciones y merecen leerse distinto.
+            pointRadius: data.fiveK.map((p: any) => (p.measured ? 7 : 4)),
+            pointHoverRadius: 9,
+            pointBorderColor: themeColor('surface'),
+            pointBorderWidth: 2,
+          }],
+        },
+        plugins: [
+          referenceLinePlugin(data.baseline5k, 'marca inicial'),
+          referenceLinePlugin(data.target5k, 'meta'),
+        ],
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: axisStyle(),
+            y: {
+              reverse: true,
+              ...axisStyle(),
+              ticks: { ...axisStyle().ticks, callback: (v: any) => formatDuration(v) },
+            },
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              ...tooltipStyle(),
+              callbacks: {
+                label: (item: any) => {
+                  const point = data.fiveK[item.dataIndex];
+                  return ` ${formatDuration(point.seconds)}${point.measured ? ' (medido)' : ' (estimado)'}`;
+                },
+              },
+            },
+          },
+        },
+      }));
+    }
+  }
+
+  document.addEventListener('astro:page-load', init);
+  // Las View Transitions reemplazan los canvas: hay que soltar las instancias
+  // viejas o Chart.js sigue apuntando a nodos que ya no están en el documento.
+  document.addEventListener('astro:before-swap', destroyAll);
+</script>

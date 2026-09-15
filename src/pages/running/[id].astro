@@ -1,0 +1,188 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Toast from "../../components/Toast.astro";
+import { getRun } from "../../lib/db/repos/running";
+import { RUN_TYPE_LABELS, formatDuration, formatPace, zoneVerdict, PACE_ZONES } from "../../lib/pace";
+import { RUN_TYPE_COLORS } from "../../lib/run-stats";
+
+const user = Astro.locals.user!;
+const { id } = Astro.params;
+
+// getRun filtra por userId: pedir el id de otra persona devuelve null, no sus datos.
+const run = id ? await getRun(user.id, id) : null;
+if (!run) return Astro.redirect("/progreso-running");
+
+const verdict = zoneVerdict(run.runType, run.avgPaceSeconds);
+const zone = PACE_ZONES[run.runType];
+
+const VERDICT_TEXT: Record<string, { text: string; tone: string }> = {
+  faster: { text: "Más rápido que la zona objetivo", tone: "border-orange/30 bg-orange/10 text-orange" },
+  inZone: { text: "Dentro de la zona objetivo", tone: "border-blue/30 bg-blue/10 text-blue" },
+  slower: { text: "Más lento que la zona objetivo", tone: "border-orange/30 bg-orange/10 text-orange" },
+  noZone: { text: "Sesión a tope: sin zona que respetar", tone: "border-border bg-surface2 text-muted" },
+};
+
+const dateLabel = new Intl.DateTimeFormat("es-MX", {
+  weekday: "long", day: "numeric", month: "long", year: "numeric",
+}).format(new Date(`${run.date}T00:00:00`));
+
+const details = [
+  { label: "Distancia", value: `${run.distanceKm} km` },
+  { label: "Tiempo", value: formatDuration(run.durationSeconds) },
+  { label: "Ritmo medio", value: `${formatPace(run.avgPaceSeconds)} min/km` },
+  { label: "FC media", value: run.avgHeartRate ? `${run.avgHeartRate} ppm` : "—" },
+  { label: "FC máxima", value: run.maxHeartRate ? `${run.maxHeartRate} ppm` : "—" },
+  { label: "Desnivel", value: run.elevationGainM !== null ? `${run.elevationGainM} m` : "—" },
+  { label: "Esfuerzo", value: run.perceivedEffort ? `${run.perceivedEffort}/10` : "—" },
+  { label: "Calzado", value: run.shoes ?? "—" },
+];
+---
+
+<Layout title="Carrera" currentPage="running">
+  <Toast />
+  <div class="mx-auto max-w-2xl space-y-5 px-4 py-6 lg:px-8 lg:py-8" data-run-id={String(run._id)}>
+    <a
+      href="/progreso-running"
+      class="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-primary"
+    >
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        ><polyline points="15 18 9 12 15 6"></polyline></svg
+      >
+      Progreso de running
+    </a>
+
+    <div>
+      <p class="text-xs capitalize text-muted">{dateLabel}</p>
+      <div class="mt-1 flex items-center gap-2">
+        <span
+          class="h-3 w-3 shrink-0 rounded-full"
+          style={`background:${RUN_TYPE_COLORS[run.runType]}`}
+          aria-hidden="true"></span>
+        <h1 class="font-display text-3xl text-primary">
+          {RUN_TYPE_LABELS[run.runType].toUpperCase()}
+        </h1>
+      </div>
+    </div>
+
+    <div class={`rounded-xl border px-4 py-3 text-sm ${VERDICT_TEXT[verdict]!.tone}`}>
+      {VERDICT_TEXT[verdict]!.text}
+      {
+        zone && (
+          <span class="text-muted2">
+            {" "}· zona {formatPace(zone.minSeconds)}-{formatPace(zone.maxSeconds)} min/km
+          </span>
+        )
+      }
+    </div>
+
+    <section class="rounded-xl border border-border2 bg-surface p-6">
+      <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {
+          details.map((detail) => (
+            <div>
+              <p class="mb-1 text-xs uppercase tracking-wider text-muted">{detail.label}</p>
+              <p class="font-semibold text-primary">{detail.value}</p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    {
+      run.intervals.length > 0 && (
+        <section class="rounded-xl border border-border2 bg-surface p-6">
+          <h2 class="mb-4 text-sm font-semibold text-primary">
+            Repeticiones <span class="font-normal text-muted">({run.intervals.length})</span>
+          </h2>
+          <div class="-mx-2 overflow-x-auto px-2">
+            <table class="w-full min-w-[420px] text-sm">
+              <thead>
+                <tr class="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
+                  <th class="pb-2 font-medium">#</th>
+                  <th class="pb-2 text-right font-medium">Distancia</th>
+                  <th class="pb-2 text-right font-medium">Tiempo</th>
+                  <th class="pb-2 text-right font-medium">Ritmo</th>
+                  <th class="pb-2 text-right font-medium">Recuperación</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                {run.intervals.map((interval) => (
+                  <tr>
+                    <td class="py-2 tabular-nums text-muted2">{interval.index}</td>
+                    <td class="py-2 text-right tabular-nums text-muted">{interval.distanceM} m</td>
+                    <td class="py-2 text-right tabular-nums text-muted">
+                      {formatDuration(interval.durationSeconds)}
+                    </td>
+                    <td class="py-2 text-right tabular-nums text-primary">
+                      {formatPace(interval.paceSeconds)}
+                    </td>
+                    <td class="py-2 text-right tabular-nums text-muted2">
+                      {interval.recoverySeconds !== null ? `${interval.recoverySeconds} s` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )
+    }
+
+    {
+      run.note && (
+        <section class="rounded-xl border border-border2 bg-surface p-6">
+          <h2 class="mb-2 text-sm font-semibold text-primary">Nota</h2>
+          <p class="text-sm whitespace-pre-wrap text-muted">{run.note}</p>
+        </section>
+      )
+    }
+
+    <button
+      id="delete-run"
+      type="button"
+      class="w-full rounded-lg border border-orange/30 py-3 text-sm font-semibold text-orange transition-colors hover:bg-orange/10"
+    >
+      Eliminar esta carrera
+    </button>
+  </div>
+</Layout>
+
+<script>
+  function init() {
+    const button = document.getElementById("delete-run");
+    if (!button) return;
+
+    const id = (button.closest("[data-run-id]") as HTMLElement | null)?.dataset.runId;
+    if (!id) return;
+
+    let armed = false;
+    button.addEventListener("click", async () => {
+      // Confirmación en el propio botón: un window.confirm() bloquea el hilo y
+      // es justo lo que no conviene en una app instalada como PWA.
+      if (!armed) {
+        armed = true;
+        button.textContent = "Pulsa otra vez para confirmar";
+        button.classList.add("bg-orange/10");
+        setTimeout(() => {
+          armed = false;
+          button.textContent = "Eliminar esta carrera";
+          button.classList.remove("bg-orange/10");
+        }, 4000);
+        return;
+      }
+
+      const response = await fetch(`/api/running?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        window.showToast?.("No se pudo eliminar la carrera", "error");
+        return;
+      }
+
+      window.location.href = "/progreso-running";
+    });
+  }
+
+  document.addEventListener("astro:page-load", init);
+</script>

@@ -1,22 +1,213 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import ComingSoon from "../components/ComingSoon.astro";
+import RunCharts from "../components/running/RunCharts.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import { listRuns } from "../lib/db/repos/running";
+import {
+  PACE_ZONES, RUN_TYPE_LABELS, detectFatigue, formatDuration, formatPace,
+} from "../lib/pace";
+import {
+  RUN_TYPE_COLORS, RUN_TYPE_ORDER, WEEKLY_VOLUME_TARGET,
+  fiveKProjection, runRecords, volumeByType, weeklyVolume, zoneAdherence,
+} from "../lib/run-stats";
+
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+const runs = await listRuns(user.id, 300);
+
+// listRuns devuelve de la más reciente a la más antigua; las gráficas van al revés.
+const chrono = [...runs].reverse();
+
+const records = runRecords(chrono);
+const weeks = weeklyVolume(chrono);
+const mix = volumeByType(chrono);
+const adherence = zoneAdherence(chrono);
+const fatigue = detectFatigue(chrono);
+const projection = fiveKProjection(chrono);
+
+const baseline5k = profile?.baselines.fiveKSeconds ?? 1840;
+const target5k = profile?.goals.target5kSeconds ?? 1725;
+
+// Una serie por tipo: la leyenda nombra cada identidad y el color deja de ser
+// la única pista.
+const paceSeries = RUN_TYPE_ORDER.concat("race")
+  .map((runType) => ({
+    label: RUN_TYPE_LABELS[runType],
+    color: RUN_TYPE_COLORS[runType],
+    points: chrono
+      .map((run, index) => ({ run, index }))
+      .filter(({ run }) => run.runType === runType)
+      .map(({ run, index }) => ({ x: index, y: run.avgPaceSeconds, date: run.date })),
+  }))
+  .filter((series) => series.points.length > 0);
+
+// Fácil y tirada larga comparten zona (7:15-7:45), así que la banda se
+// etiqueta con ambos nombres: rotularla sólo con uno haría creer que el otro
+// no tiene objetivo.
+const bandsByRange = new Map<string, string[]>();
+for (const type of RUN_TYPE_ORDER) {
+  const zone = PACE_ZONES[type];
+  if (!zone) continue;
+  const key = `${zone.minSeconds}-${zone.maxSeconds}`;
+  bandsByRange.set(key, [...(bandsByRange.get(key) ?? []), RUN_TYPE_LABELS[type]]);
+}
+const zoneBands = [...bandsByRange.entries()].map(([range, labels]) => {
+  const [min, max] = range.split('-').map(Number);
+  return { min: min!, max: max!, label: labels.join(' / ') };
+});
+
+const payload = JSON.stringify({
+  paceSeries,
+  zoneBands,
+  dateForIndex: chrono.map((run) => run.date),
+  weeks,
+  volumeTarget: WEEKLY_VOLUME_TARGET,
+  volumeColor: RUN_TYPE_COLORS.easy,
+  mix: mix.map((slice) => ({
+    ...slice,
+    label: RUN_TYPE_LABELS[slice.runType],
+    color: RUN_TYPE_COLORS[slice.runType],
+  })),
+  fiveK: projection,
+  fiveKColor: RUN_TYPE_COLORS.threshold,
+  baseline5k,
+  target5k,
+});
+
+const judged = adherence.faster + adherence.inZone + adherence.slower;
+const inZonePct = judged === 0 ? null : Math.round((adherence.inZone / judged) * 100);
+
+const stats = [
+  { label: "Mejor ritmo", value: formatPace(records.bestPaceSeconds), unit: "min/km" },
+  { label: "Mejor 5K", value: formatDuration(records.best5kSeconds), unit: "" },
+  { label: "Distancia total", value: records.totalKm ? String(records.totalKm) : "—", unit: "km" },
+  { label: "Tiempo total", value: formatDuration(records.totalSeconds || null), unit: "" },
+  { label: "Tirada más larga", value: records.longestKm ? String(records.longestKm) : "—", unit: "km" },
+  { label: "Semana más alta", value: records.biggestWeekKm ? String(records.biggestWeekKm) : "—", unit: "km" },
+];
 ---
 
 <Layout title="Running" currentPage="running">
-  <ComingSoon
-    title="Running"
-    icon="running"
-    tanda={4}
-    description="Registro de carreras y progresión de tiempo, distancia y ritmo contra las zonas objetivo del plan."
-    features={[
-      "Alta de sesiones VO₂máx, umbral, fácil, tirada larga y contrarreloj",
-      "Desglose por intervalos con el ritmo de cada repetición",
-      "Ritmo en el tiempo sobre las bandas objetivo de rutina.md",
-      "Distribución del volumen por zona de intensidad",
-      "Proyección de 5K desde la marca de partida hasta la meta",
-    ]}
-    legacyHref="/progress"
-    legacyLabel="las gráficas actuales de ritmo, distancia y agua siguen disponibles"
-  />
+  <div class="mx-auto max-w-4xl space-y-5 px-4 py-6 lg:px-8 lg:py-8">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h1 class="font-display text-3xl text-primary">RUNNING</h1>
+      <a
+        href="/running/nueva"
+        class="rounded-lg bg-blue px-4 py-2.5 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95"
+      >
+        Registrar carrera
+      </a>
+    </div>
+
+    {
+      fatigue.fatigued && (
+        <div class="flex gap-3 rounded-xl border border-orange/30 bg-orange/10 p-4">
+          <svg class="mt-0.5 h-5 w-5 shrink-0 text-orange" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <div>
+            <p class="text-sm font-semibold text-orange">Fatiga acumulada</p>
+            <p class="mt-1 text-sm text-muted">
+              Tus series han salido más de 5 s/km por encima del objetivo dos semanas
+              seguidas. Según rutina.md §4D toca bajar la pierna a 2 series por ejercicio
+              durante dos semanas.
+            </p>
+          </div>
+        </div>
+      )
+    }
+
+    {
+      inZonePct !== null && (
+        <div class="rounded-xl border border-border2 bg-surface p-4">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class="text-sm font-semibold text-primary">Sesiones en su zona objetivo</h2>
+            <span class="font-display text-2xl text-primary">{inZonePct}%</span>
+          </div>
+          <div class="mt-3 flex h-2 gap-0.5 overflow-hidden rounded-full">
+            <div class="bg-orange/60" style={`width:${Math.round((adherence.faster / judged) * 100)}%`} />
+            <div class="bg-blue" style={`width:${Math.round((adherence.inZone / judged) * 100)}%`} />
+            <div class="bg-muted2" style={`width:${Math.round((adherence.slower / judged) * 100)}%`} />
+          </div>
+          <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+            <span>Demasiado rápido: <strong class="text-primary">{adherence.faster}</strong></span>
+            <span>En zona: <strong class="text-primary">{adherence.inZone}</strong></span>
+            <span>Demasiado lento: <strong class="text-primary">{adherence.slower}</strong></span>
+          </div>
+        </div>
+      )
+    }
+
+    <section class="rounded-xl border border-border2 bg-surface p-4 lg:p-6">
+      <h2 class="mb-4 text-sm font-semibold text-primary">Récords</h2>
+      <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        {
+          stats.map((stat) => (
+            <div>
+              <p class="mb-1 text-xs uppercase tracking-wider text-muted">{stat.label}</p>
+              <p class="text-xl font-bold text-primary">
+                {stat.value}
+                {stat.unit && <span class="ml-1 text-sm font-normal text-muted">{stat.unit}</span>}
+              </p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <RunCharts payload={payload} hasData={chrono.length > 0} />
+
+    {
+      runs.length > 0 && (
+        <section class="rounded-xl border border-border2 bg-surface p-4 lg:p-6">
+          {/* Vista de tabla: la misma información sin depender de la gráfica. */}
+          <h2 class="mb-4 text-sm font-semibold text-primary">Sesiones</h2>
+          <div class="-mx-4 overflow-x-auto px-4">
+            <table class="w-full min-w-[520px] text-sm">
+              <thead>
+                <tr class="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
+                  <th class="pb-2 font-medium">Fecha</th>
+                  <th class="pb-2 font-medium">Tipo</th>
+                  <th class="pb-2 text-right font-medium">Distancia</th>
+                  <th class="pb-2 text-right font-medium">Tiempo</th>
+                  <th class="pb-2 text-right font-medium">Ritmo</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                {runs.map((run) => (
+                  <tr>
+                    <td class="py-2.5">
+                      <a href={`/running/${run._id}`} class="text-primary hover:text-blue">
+                        {new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" })
+                          .format(new Date(`${run.date}T00:00:00`))}
+                      </a>
+                    </td>
+                    <td class="py-2.5">
+                      <span class="inline-flex items-center gap-1.5 text-muted">
+                        <span
+                          class="h-2 w-2 shrink-0 rounded-full"
+                          style={`background:${RUN_TYPE_COLORS[run.runType]}`}
+                          aria-hidden="true"
+                        />
+                        {RUN_TYPE_LABELS[run.runType]}
+                      </span>
+                    </td>
+                    <td class="py-2.5 text-right tabular-nums text-muted">{run.distanceKm} km</td>
+                    <td class="py-2.5 text-right tabular-nums text-muted">
+                      {formatDuration(run.durationSeconds)}
+                    </td>
+                    <td class="py-2.5 text-right tabular-nums text-primary">
+                      {formatPace(run.avgPaceSeconds)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )
+    }
+  </div>
 </Layout>
