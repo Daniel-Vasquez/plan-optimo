@@ -1,0 +1,64 @@
+---
+/**
+ * Botones de registro rápido.
+ *
+ * Las cantidades son las de rutina.md: 250 ml es un vaso, 500 una botella
+ * pequeña y 750 el extra por hora de voleibol. Si registrar un vaso costara
+ * más de un toque, no se registraría.
+ */
+const PRESETS = [250, 500, 750];
+---
+
+<section class="rounded-xl border border-border2 bg-surface p-6">
+  <h2 class="mb-4 text-sm font-semibold text-primary">Registrar</h2>
+
+  <div class="grid grid-cols-3 gap-3">
+    {
+      PRESETS.map((ml) => (
+        <button
+          type="button"
+          class="water-add rounded-xl border border-blue/30 bg-blue/10 py-4 font-bold text-blue transition-all hover:bg-blue/20 active:scale-95 disabled:opacity-50"
+          data-ml={ml}
+        >
+          +{ml}
+          <span class="block text-[11px] font-normal text-muted">ml</span>
+        </button>
+      ))
+    }
+  </div>
+
+  <form id="water-custom-form" class="mt-4 flex gap-2">
+    <label for="water-custom" class="sr-only">Cantidad personalizada en mililitros</label>
+    <input
+      id="water-custom"
+      type="number"
+      min="1"
+      max="3000"
+      step="10"
+      placeholder="Otra cantidad (ml)"
+      class="min-w-0 flex-1 rounded-lg border border-border2 bg-surface2 px-4 py-3 text-primary placeholder:text-muted2 transition-colors focus:border-blue/50 focus:outline-hidden"
+    />
+    <button
+      type="submit"
+      class="shrink-0 rounded-lg bg-blue px-5 py-3 font-bold text-white transition-all hover:opacity-90 active:scale-95"
+    >
+      Añadir
+    </button>
+  </form>
+
+  <p id="water-error" class="mt-3 hidden text-sm text-orange" role="alert"></p>
+</section>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+</style>

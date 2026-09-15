@@ -3,7 +3,9 @@ import { ClientRouter } from "astro:transitions";
 import "../styles/global.css";
 import TopNav from "../components/nav/TopNav.astro";
 import { getProfile } from "../lib/db/repos/profiles";
+import { getWaterDay } from "../lib/db/repos/water";
 import { planWeekFor, todayInTimezone } from "../lib/date";
+import { waterGoalFor, waterPct } from "../lib/water";
 
 export interface Props {
   title?: string;
@@ -22,6 +24,14 @@ const weekBadge = profile
   ? `Sem ${planWeekFor(profile.planStartDate, todayInTimezone(profile.timezone), planWeeks)}/${planWeeks}`
   : "";
 const displayName = profile?.displayName || user.name || user.email;
+
+// Indicador de agua siempre visible: el registro de hidratación se abandona si
+// hay que entrar en una pantalla concreta para saber cómo se va.
+const today = todayInTimezone(profile?.timezone ?? "America/Mexico_City");
+const waterDay = await getWaterDay(user.id, today);
+const waterPercent = profile
+  ? waterPct(waterDay?.totalMl ?? 0, waterGoalFor(profile, today))
+  : null;
 ---
 
 <!doctype html>
@@ -96,6 +106,7 @@ const displayName = profile?.displayName || user.name || user.email;
       userName={displayName}
       userEmail={user.email}
       weekBadge={weekBadge}
+      waterPct={waterPercent}
     />
 
     {/* El padding compensa la altura de la barra fija. */}

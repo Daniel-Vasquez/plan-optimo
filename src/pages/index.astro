@@ -1,6 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { getProfile } from "../lib/db/repos/profiles";
+import { getWaterDay } from "../lib/db/repos/water";
+import { waterGoalFor } from "../lib/water";
+import WaterCard from "../components/water/WaterCard.astro";
 import { planWeekFor, todayInTimezone } from "../lib/date";
 import MetricCard from "../components/MetricCard.astro";
 import SessionBadge from "../components/SessionBadge.astro";
@@ -19,6 +22,10 @@ const today = todayInTimezone(timezone);
 const planStartDate = profile?.planStartDate ?? today;
 const planWeek = planWeekFor(planStartDate, today, planWeeks);
 const displayName = profile?.displayName || user.name || user.email;
+
+const waterDay = await getWaterDay(user.id, today);
+const waterTotalMl = waterDay?.totalMl ?? 0;
+const waterGoalMl = waterGoalFor(profile, today);
 ---
 
 <Layout title="Dashboard" currentPage="inicio">
@@ -31,6 +38,8 @@ const displayName = profile?.displayName || user.name || user.email;
     data-plan-start={planStartDate}
     data-plan-weeks={String(planWeeks)}
     data-plan-week={String(planWeek)}
+    data-water-total={String(waterTotalMl)}
+    data-water-goal={String(waterGoalMl)}
   >
     <!-- Loading state -->
     <div id="dashboard-loading" class="text-muted text-sm">Cargando...</div>
@@ -74,7 +83,9 @@ const displayName = profile?.displayName || user.name || user.email;
         <h2 class="text-xs text-muted uppercase tracking-wider mb-3">
           Métricas rápidas
         </h2>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" id="metrics-grid">
+        <WaterCard totalMl={waterTotalMl} goalMl={waterGoalMl} date={today} />
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3" id="metrics-grid">
         </div>
       </section>
 
@@ -219,7 +230,8 @@ const displayName = profile?.displayName || user.name || user.email;
     const streak = getStreak();
     const weekComp = getWeekCompletion();
     const bestPace = getBestPace();
-    const waterToday = getSession(todayStr)?.water ?? null;
+    const waterTotalMl = Number(root.dataset.waterTotal) || 0;
+    const waterGoalMl = Number(root.dataset.waterGoal) || 0;
 
     const metricsGrid = document.getElementById("metrics-grid")!;
     const metrics = [
@@ -236,8 +248,8 @@ const displayName = profile?.displayName || user.name || user.email;
       },
       {
         label: "Agua hoy",
-        value: waterToday !== null ? waterToday.toFixed(1) : "—",
-        unit: waterToday !== null ? "L" : "",
+        value: waterGoalMl > 0 ? `${Math.round((waterTotalMl / waterGoalMl) * 100)}%` : "—",
+        unit: waterGoalMl > 0 ? "de la meta" : "",
       },
     ];
     metricsGrid.innerHTML = metrics

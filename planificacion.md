@@ -2,7 +2,7 @@
 
 > **Documento de arquitectura y hoja de ruta.** Fase 1: análisis y planificación. No se ha escrito ni modificado código de aplicación.
 > **Fuentes del análisis:** estructura real del repositorio (`src/`, `astro.config.mjs`, `package.json`, `tailwind.config.js`) y el plan de entrenamiento `rutina.md`.
-> **Fecha:** 2026-09-14 · **Estado:** Tandas 0, 1 y 2 ✅ completadas · siguiente: Tanda 3 (hidratación).
+> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-3 ✅ completadas · siguiente: Tanda 4 (running).
 
 ---
 
@@ -610,7 +610,7 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 ---
 
-### Tanda 3 — Hidratación (el módulo más simple, extremo a extremo)
+### Tanda 3 — Hidratación (el módulo más simple, extremo a extremo) ✅ *completada*
 
 **Objetivo:** validar el patrón completo página → API → repositorio → Mongo con el módulo de menor complejidad.
 
@@ -622,6 +622,16 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 **Archivos a crear:** `src/pages/hidratacion.astro`, `src/components/water/WaterCounter.astro`, `src/components/water/WaterQuickAdd.astro`, `src/components/water/WaterHistory.astro`, `src/lib/db/repos/water.ts`, `src/pages/api/water.ts`
 **Archivos a modificar:** `src/components/nav/TopNav.astro`, `src/pages/index.astro`
+
+**Notas de ejecución**
+- El patrón página → API → repositorio → Mongo queda validado y es el molde para las tandas siguientes.
+- Un documento por día (`water_logs`), con índice único `{userId, date}`: es lo que impide que dos toques simultáneos creen dos documentos para la misma jornada.
+- `totalMl` se recalcula desde `entries` en cada escritura en vez de con `$inc`: mantiene el total coherente aunque una escritura anterior falle a medias.
+- `goalMl` se guarda como instantánea del día. Si mañana se sube la meta del perfil, el histórico sigue mostrando contra qué se comparó cada día.
+- La meta del sábado sube sola: 2750 + 750 × 4 h de voleibol = 5750 ml (`rutina.md §1`). El historial dibuja la línea de meta de CADA día, así que el sábado se ve más alta.
+- El registro por serie (`source: 'during-set'`) ya está soportado por la API y el modelo; la interfaz que lo usa llega con la pantalla de fuerza (Tanda 5).
+- Historial dibujado con divs, no con Chart.js: son 30 barras y una línea, y no compensa cargar la librería.
+- 17 pruebas nuevas sobre la lógica de metas y rachas (44 en total).
 
 **Requiero de tu lado:** nada.
 

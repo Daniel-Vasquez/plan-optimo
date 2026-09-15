@@ -1,0 +1,70 @@
+---
+import { formatLiters, waterPct } from '../../lib/water';
+import type { WaterLog } from '../../types/models';
+
+/**
+ * Historial en barras.
+ *
+ * Se dibuja con divs y no con Chart.js: son 30 valores y una línea de meta.
+ * Cargar una librería de gráficas entera para esto sólo añadiría peso y una
+ * dependencia que hay que esperar a que cargue.
+ */
+export interface Props {
+  days: Pick<WaterLog, 'date' | 'totalMl' | 'goalMl'>[];
+  streak: number;
+  average: number;
+}
+
+const { days, streak, average } = Astro.props;
+
+const dayFmt = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short' });
+const label = (date: string) => dayFmt.format(new Date(`${date}T00:00:00`));
+
+// La altura se normaliza contra el día más alto para que las diferencias se
+// aprecien; la meta se marca aparte con el color.
+const peak = Math.max(1, ...days.map((d) => Math.max(d.totalMl, d.goalMl)));
+---
+
+<section class="rounded-xl border border-border2 bg-surface p-6">
+  <div class="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+    <h2 class="text-sm font-semibold text-primary">Últimos 30 días</h2>
+    <div class="flex gap-4 text-xs text-muted">
+      <span>Media <strong class="text-primary">{formatLiters(average)}</strong></span>
+      <span>Racha <strong class="text-primary">{streak}</strong> {streak === 1 ? 'día' : 'días'}</span>
+    </div>
+  </div>
+
+  {
+    days.length === 0 ? (
+      <p class="py-8 text-center text-sm text-muted">Todavía no hay historial.</p>
+    ) : (
+      <div class="scrollbar-hide -mx-1 flex h-40 items-end gap-1 overflow-x-auto px-1">
+        {days.map((day) => {
+          const met = day.totalMl >= day.goalMl;
+          const height = Math.round((day.totalMl / peak) * 100);
+          return (
+            <div class="group flex min-w-[14px] flex-1 flex-col items-center gap-1.5">
+              <div class="relative flex h-32 w-full items-end">
+                {/* Línea de meta de ESE día: el sábado está más arriba. */}
+                <div
+                  class="absolute inset-x-0 border-t border-dashed border-muted2/50"
+                  style={`bottom:${Math.round((day.goalMl / peak) * 100)}%`}
+                  aria-hidden="true"
+                />
+                <div
+                  class:list={[
+                    'w-full rounded-t transition-all',
+                    met ? 'bg-blue' : 'bg-blue/35',
+                  ]}
+                  style={`height:${height}%`}
+                  title={`${label(day.date)}: ${formatLiters(day.totalMl)} de ${formatLiters(day.goalMl)} (${waterPct(day.totalMl, day.goalMl)}%)`}
+                />
+              </div>
+              <span class="hidden text-[9px] text-muted2 lg:block">{label(day.date)}</span>
+            </div>
+          );
+        })}
+      </div>
+    )
+  }
+</section>

@@ -1,0 +1,113 @@
+---
+import Icon from '../nav/Icon.astro';
+import { formatLiters, waterPct } from '../../lib/water';
+
+/**
+ * Tarjeta de hidratación del inicio, con registro rápido incorporado.
+ *
+ * Lleva sus propios botones a propósito: obligar a navegar a /hidratacion para
+ * apuntar un vaso añade fricción justo en la acción que hay que repetir diez
+ * veces al día, y lo que cuesta no se registra.
+ */
+export interface Props {
+  totalMl: number;
+  goalMl: number;
+  date: string;
+}
+
+const { totalMl, goalMl, date } = Astro.props;
+const pct = waterPct(totalMl, goalMl);
+---
+
+<section
+  class="rounded-xl border border-border bg-surface p-4"
+  id="water-card"
+  data-date={date}
+>
+  <div class="mb-3 flex items-center justify-between gap-2">
+    <a
+      href="/hidratacion"
+      class="group flex items-center gap-2 text-xs uppercase tracking-wider text-muted transition-colors hover:text-primary"
+    >
+      <Icon name="agua" class="w-4 h-4 text-blue" />
+      Hidratación
+    </a>
+    <span class="text-xs tabular-nums text-muted">
+      <strong id="water-card-total" class="text-primary">{formatLiters(totalMl)}</strong>
+      <span class="text-muted2"> / {formatLiters(goalMl)}</span>
+    </span>
+  </div>
+
+  <div class="h-2 overflow-hidden rounded-full bg-surface2">
+    <div
+      id="water-card-bar"
+      class="h-full rounded-full bg-blue transition-[width] duration-500"
+      style={`width:${pct}%`}
+      role="progressbar"
+      aria-valuenow={pct}
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-label="Progreso de hidratación de hoy"
+    >
+    </div>
+  </div>
+
+  <div class="mt-3 grid grid-cols-3 gap-2">
+    {
+      [250, 500, 750].map((ml) => (
+        <button
+          type="button"
+          class="water-card-add rounded-lg border border-blue/25 bg-blue/10 py-2 text-sm font-semibold text-blue transition-all hover:bg-blue/20 active:scale-95"
+          data-ml={ml}
+        >
+          +{ml}
+        </button>
+      ))
+    }
+  </div>
+</section>
+
+<script>
+  import { formatLiters, waterPct } from '../../lib/water';
+
+  function initWaterCard() {
+    const card = document.getElementById('water-card');
+    if (!card) return;
+
+    const date = card.dataset.date!;
+    const bar = document.getElementById('water-card-bar')!;
+    const total = document.getElementById('water-card-total')!;
+
+    for (const button of card.querySelectorAll<HTMLButtonElement>('.water-card-add')) {
+      button.addEventListener('click', async () => {
+        const ml = Number(button.dataset.ml);
+        button.disabled = true;
+
+        const response = await fetch('/api/water', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ml, date, source: 'quick' }),
+        });
+        button.disabled = false;
+
+        if (!response.ok) {
+          window.showToast?.('No se pudo registrar el agua', 'error');
+          return;
+        }
+
+        const { day } = await response.json();
+        const pct = waterPct(day.totalMl, day.goalMl);
+        bar.style.width = `${pct}%`;
+        bar.setAttribute('aria-valuenow', String(pct));
+        total.textContent = formatLiters(day.totalMl);
+
+        const navBadge = document.getElementById('nav-water-pct');
+        if (navBadge) navBadge.textContent = `${pct}%`;
+
+        window.showToast?.(`+${ml} ml registrados`);
+      });
+    }
+  }
+
+  document.addEventListener('astro:page-load', initWaterCard);
+</script>

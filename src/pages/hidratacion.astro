@@ -1,20 +1,154 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import ComingSoon from "../components/ComingSoon.astro";
+import Toast from "../components/Toast.astro";
+import WaterCounter from "../components/water/WaterCounter.astro";
+import WaterQuickAdd from "../components/water/WaterQuickAdd.astro";
+import WaterEntries from "../components/water/WaterEntries.astro";
+import WaterHistory from "../components/water/WaterHistory.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import { getWaterDay, getWaterRange } from "../lib/db/repos/water";
+import { todayInTimezone, toDateStr, parseDateStr } from "../lib/date";
+import { isVolleyballDay, waterAverage, waterGoalFor, waterStreak } from "../lib/water";
+
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+const timezone = profile?.timezone ?? "America/Mexico_City";
+const today = todayInTimezone(timezone);
+
+// Se renderiza todo en el servidor: la pantalla llega con el total ya puesto,
+// sin el "Cargando..." que tenían las páginas que leían de localStorage.
+const goalMl = waterGoalFor(profile, today);
+const day = await getWaterDay(user.id, today);
+const totalMl = day?.totalMl ?? 0;
+const entries = day?.entries ?? [];
+
+const start = parseDateStr(today);
+start.setDate(start.getDate() - 29);
+const history = await getWaterRange(user.id, toDateStr(start), today);
+
+const streak = waterStreak(history, today);
+const average = waterAverage(history);
 ---
 
 <Layout title="Hidratación" currentPage="agua">
-  <ComingSoon
-    title="Hidratación"
-    icon="agua"
-    tanda={3}
-    description="Contador diario de agua contra la meta del perfil, integrado también en el descanso entre series."
-    features={[
-      "Botones rápidos de +250, +500 y +750 ml, con la hora de cada toma",
-      "Meta dinámica: los sábados sube por las 4 horas de voleibol",
-      "Registro por serie durante el descanso en la pantalla de fuerza",
-      "Indicador en la barra superior y tarjeta en el inicio",
-      "Historial de 30 días y racha de días cumplidos",
-    ]}
-  />
+  <Toast />
+  <div
+    class="mx-auto max-w-3xl space-y-5 px-4 py-6 lg:px-8 lg:py-8"
+    id="water-root"
+    data-date={today}
+    data-goal={String(goalMl)}
+  >
+    <h1 class="font-display text-3xl text-primary">HIDRATACIÓN</h1>
+
+    <WaterCounter totalMl={totalMl} goalMl={goalMl} isVolleyball={isVolleyballDay(today)} />
+    <WaterQuickAdd />
+    <WaterEntries entries={entries} timezone={timezone} />
+    <WaterHistory days={history} streak={streak} average={average} />
+  </div>
 </Layout>
+
+<script>
+  import { formatLiters, waterPct } from "../lib/water";
+
+  function init() {
+    const root = document.getElementById("water-root");
+    if (!root) return;
+
+    const date = root.dataset.date!;
+    const errorEl = document.getElementById("water-error")!;
+
+    function showError(message: string) {
+      errorEl.textContent = message;
+      errorEl.classList.remove("hidden");
+    }
+
+    /**
+     * Repinta el contador sin recargar la página.
+     *
+     * Sólo se actualizan las cifras y la altura del vaso; la lista de tomas y
+     * el historial se refrescan con una recarga diferida, porque reconstruir
+     * ese HTML aquí duplicaría el marcado de los componentes.
+     */
+    function paint(totalMl: number, goalMl: number) {
+      const pct = waterPct(totalMl, goalMl);
+      document.getElementById("water-fill")!.style.height = `${pct}%`;
+      document.getElementById("water-pct")!.textContent = `${pct}%`;
+      document.getElementById("water-total")!.textContent = formatLiters(totalMl);
+      document.getElementById("water-goal")!.textContent = formatLiters(goalMl);
+
+      const remaining = Math.max(0, goalMl - totalMl);
+      document.getElementById("water-remaining")!.textContent =
+        remaining > 0 ? ` · faltan ${formatLiters(remaining)}` : " · meta cumplida";
+
+      // El indicador de la barra superior vive fuera de esta página.
+      const badge = document.getElementById("nav-water-pct");
+      if (badge) badge.textContent = `${pct}%`;
+    }
+
+    let refreshTimer: number | undefined;
+    function scheduleRefresh() {
+      // Se agrupa: tocar tres veces seguidas no debe disparar tres recargas.
+      clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => window.location.reload(), 1200);
+    }
+
+    async function addWater(ml: number, source: string) {
+      errorEl.classList.add("hidden");
+      const response = await fetch("/api/water", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ml, date, source }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        showError(body.error ?? "No se pudo registrar el agua.");
+        return;
+      }
+
+      const { day } = await response.json();
+      paint(day.totalMl, day.goalMl);
+      window.showToast?.(`+${ml} ml registrados`);
+      scheduleRefresh();
+    }
+
+    for (const button of document.querySelectorAll<HTMLButtonElement>(".water-add")) {
+      button.addEventListener("click", () => addWater(Number(button.dataset.ml), "quick"));
+    }
+
+    const form = document.getElementById("water-custom-form") as HTMLFormElement;
+    const input = document.getElementById("water-custom") as HTMLInputElement;
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const ml = Number(input.value);
+      if (!Number.isFinite(ml) || ml <= 0 || ml > 3000) {
+        showError("Escribe una cantidad entre 1 y 3000 ml.");
+        return;
+      }
+      input.value = "";
+      addWater(ml, "custom");
+    });
+
+    for (const button of document.querySelectorAll<HTMLButtonElement>(".water-remove")) {
+      button.addEventListener("click", async () => {
+        const id = button.dataset.entryId!;
+        const response = await fetch(
+          `/api/water?date=${encodeURIComponent(date)}&id=${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+        );
+
+        if (!response.ok) {
+          showError("No se pudo eliminar la toma.");
+          return;
+        }
+
+        const { day } = await response.json();
+        paint(day.totalMl, day.goalMl);
+        button.closest("li")?.remove();
+        scheduleRefresh();
+      });
+    }
+  }
+
+  document.addEventListener("astro:page-load", init);
+</script>

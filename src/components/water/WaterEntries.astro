@@ -1,0 +1,77 @@
+---
+import type { WaterEntry } from '../../types/models';
+
+/**
+ * Tomas del día, con su hora y la opción de deshacer.
+ *
+ * Poder borrar importa: el registro rápido invita a tocar de más, y sin una
+ * forma de corregirlo el total deja de ser fiable y se abandona.
+ */
+export interface Props {
+  entries: WaterEntry[];
+  timezone: string;
+}
+
+const { entries, timezone } = Astro.props;
+
+const SOURCE_LABEL: Record<string, string> = {
+  quick: 'Rápido',
+  custom: 'Manual',
+  'during-set': 'Entre series',
+};
+
+const timeFmt = new Intl.DateTimeFormat('es-MX', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: timezone,
+});
+
+// Más recientes arriba: es donde se mira para deshacer.
+const ordered = [...entries].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+---
+
+<section class="rounded-xl border border-border2 bg-surface p-6">
+  <h2 class="mb-4 text-sm font-semibold text-primary">
+    Tomas de hoy
+    <span class="ml-1 font-normal text-muted">({entries.length})</span>
+  </h2>
+
+  {
+    ordered.length === 0 ? (
+      <p class="py-6 text-center text-sm text-muted">
+        Aún no has registrado agua hoy.
+      </p>
+    ) : (
+      <ul id="water-entries" class="divide-y divide-border">
+        {ordered.map((entry) => (
+          <li class="flex items-center gap-3 py-2.5" data-entry-id={entry.id}>
+            <span class="font-semibold text-primary tabular-nums">{entry.ml} ml</span>
+            <span class="text-xs text-muted">{timeFmt.format(new Date(entry.at))}</span>
+            <span class="rounded-full bg-surface2 px-2 py-0.5 text-[11px] text-muted2">
+              {SOURCE_LABEL[entry.source] ?? entry.source}
+            </span>
+            <button
+              type="button"
+              class="water-remove ml-auto rounded-lg p-1.5 text-muted2 transition-colors hover:bg-surface2 hover:text-orange"
+              data-entry-id={entry.id}
+              aria-label={`Eliminar la toma de ${entry.ml} ml`}
+            >
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</section>

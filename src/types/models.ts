@@ -86,3 +86,44 @@ export const DEFAULT_BASELINES: ProfileBaselines = {
   fiveKSeconds: 1840,
   tenKPaceSeconds: 378,
 };
+
+/** De dónde salió una toma de agua. */
+export type WaterSource =
+  /** Botón rápido de la pantalla de hidratación. */
+  | 'quick'
+  /** Cantidad escrita a mano. */
+  | 'custom'
+  /** Registrada durante el descanso entre series, en la pantalla de fuerza. */
+  | 'during-set';
+
+/** Una toma concreta, con su hora. */
+export interface WaterEntry {
+  id: string;
+  ml: number;
+  at: Date;
+  source: WaterSource;
+  /** Sólo en `during-set`: deja trazada la serie exacta. */
+  strengthSessionId?: string;
+  exerciseIndex?: number;
+  setIndex?: number;
+}
+
+/**
+ * Hidratación de un día.
+ *
+ * Un documento por día y usuario, no uno por toma: el número de tomas diarias
+ * es pequeño y así el calendario y el inicio se resuelven con una sola
+ * consulta por rango.
+ */
+export interface WaterLog extends BaseDoc {
+  date: DateStr;
+  /**
+   * Meta de ESE día, guardada al escribir. Es una instantánea a propósito: si
+   * mañana subes la meta en tu perfil, el histórico debe seguir mostrando
+   * contra qué se comparó cada día.
+   */
+  goalMl: number;
+  /** Suma de `entries`, desnormalizada para no recalcularla en cada lectura. */
+  totalMl: number;
+  entries: WaterEntry[];
+}

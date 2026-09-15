@@ -24,6 +24,7 @@ export const COLLECTIONS = {
   verification: 'verification',
   // Dominio
   profiles: 'profiles',
+  waterLogs: 'water_logs',
 } as const;
 
 /**
@@ -47,6 +48,14 @@ export async function ensureIndexes(db: Db): Promise<string[]> {
     await db
       .collection(COLLECTIONS.profiles)
       .createIndex({ userId: 1 }, { unique: true, name: 'userId_unique' }),
+  );
+
+  // Único por usuario y día: es lo que impide que dos peticiones simultáneas
+  // creen dos documentos para la misma jornada.
+  created.push(
+    await db
+      .collection(COLLECTIONS.waterLogs)
+      .createIndex({ userId: 1, date: -1 }, { unique: true, name: 'userId_date_unique' }),
   );
 
   return created;
