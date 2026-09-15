@@ -576,9 +576,8 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
    MONGODB_DB="trackfit"
    BETTER_AUTH_SECRET="<32+ caracteres aleatorios: openssl rand -base64 32>"
    BETTER_AUTH_URL="http://localhost:4321"
-   PUBLIC_APP_URL="http://localhost:4321"
    ```
-3. Las mismas variables cargadas en **Vercel → Settings → Environment Variables**, con `BETTER_AUTH_URL` y `PUBLIC_APP_URL` apuntando al dominio de producción.
+3. Las mismas variables cargadas en **Vercel → Settings → Environment Variables**, con `BETTER_AUTH_URL` apuntando al dominio de producción.
 4. Confirmación de que el despliegue es **Vercel** (lo deduzco del `.gitignore` y del último commit). Si es otro, cambia el adaptador.
 
 ---

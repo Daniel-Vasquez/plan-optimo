@@ -56,8 +56,10 @@ function createAuth() {
       cookiePrefix: 'trackfit',
     },
 
-    // Orígenes autorizados a iniciar el flujo de autenticación.
-    trustedOrigins: Array.from(new Set([serverEnv.authUrl, serverEnv.appUrl])),
+    // Orígenes autorizados a iniciar el flujo de autenticación. Se añaden los
+    // dominios que genera Vercel para que los despliegues de preview, que
+    // tienen una URL distinta en cada commit, no queden fuera.
+    trustedOrigins: Array.from(new Set([serverEnv.authUrl, ...serverEnv.vercelOrigins])),
   });
 }
 
