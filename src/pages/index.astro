@@ -1,347 +1,202 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { getProfile } from "../lib/db/repos/profiles";
-import { getWaterDay } from "../lib/db/repos/water";
-import { waterGoalFor } from "../lib/water";
-import WaterCard from "../components/water/WaterCard.astro";
-import { planWeekFor, todayInTimezone } from "../lib/date";
-import MetricCard from "../components/MetricCard.astro";
-import SessionBadge from "../components/SessionBadge.astro";
-import DayPill from "../components/DayPill.astro";
-import WeekBar from "../components/WeekBar.astro";
 import Toast from "../components/Toast.astro";
+import WaterCard from "../components/water/WaterCard.astro";
+import Icon from "../components/nav/Icon.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import { getAttendanceRange } from "../lib/db/repos/attendance";
+import { getWaterDay } from "../lib/db/repos/water";
+import { getNutritionDay } from "../lib/db/repos/nutrition";
+import { listStrengthSessions } from "../lib/db/repos/strength";
+import { adherenceOf, attendanceStreak } from "../lib/attendance";
+import { planWeekFor, todayInTimezone, toDateStr, parseDateStr } from "../lib/date";
+import { blockLabel, dayPlanFor, isDeloadWeek } from "../lib/strength";
+import { waterGoalFor } from "../lib/water";
+import { ZERO_MACROS, adherence as macroAdherence, goalsFor } from "../lib/nutrition";
 
-// El nombre y el plan salen del perfil, no de localStorage: el modal de
-// onboarding que escribía `trackfit_config` ya no existe, así que ese dato
-// nunca se rellenaba y el dashboard se quedaba en blanco.
 const user = Astro.locals.user!;
 const profile = await getProfile(user.id);
-const planWeeks = profile?.planWeeks ?? 12;
 const timezone = profile?.timezone ?? "America/Mexico_City";
 const today = todayInTimezone(timezone);
+
+const planWeeks = profile?.planWeeks ?? 12;
 const planStartDate = profile?.planStartDate ?? today;
 const planWeek = planWeekFor(planStartDate, today, planWeeks);
 const displayName = profile?.displayName || user.name || user.email;
 
-const waterDay = await getWaterDay(user.id, today);
-const waterTotalMl = waterDay?.totalMl ?? 0;
+const dayPlan = dayPlanFor(today);
+
+// Los últimos 28 días alimentan racha y adherencia semanal.
+const start = parseDateStr(today);
+start.setDate(start.getDate() - 27);
+const recentDates: string[] = [];
+for (let d = new Date(start); d <= parseDateStr(today); d.setDate(d.getDate() + 1)) {
+  recentDates.push(toDateStr(d));
+}
+const recent = await getAttendanceRange(user.id, recentDates, today, profile);
+const streak = attendanceStreak(recent, today);
+
+const weekDates = recentDates.slice(-7);
+const weekAdherence = adherenceOf(recent.filter((d) => weekDates.includes(d.date)));
+
+const [waterDay, nutritionDay, strengthSessions] = await Promise.all([
+  getWaterDay(user.id, today),
+  getNutritionDay(user.id, today),
+  listStrengthSessions(user.id, 1),
+]);
+
 const waterGoalMl = waterGoalFor(profile, today);
+const macroGoals = goalsFor(profile, today);
+const macroTotals = nutritionDay?.totals ?? ZERO_MACROS;
+const macroPct = macroAdherence(macroTotals, macroGoals);
+
+const todaySession = strengthSessions.find((s) => s.date === today) ?? null;
+const sessionDone = (todaySession?.sessionCompletionPct ?? 0) > 0;
+
+const hour = Number(
+  new Intl.DateTimeFormat("es-MX", { hour: "numeric", hour12: false, timeZone: timezone })
+    .format(new Date()),
+);
+const greeting = hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
+
+const dateLabel = new Intl.DateTimeFormat("es-MX", {
+  weekday: "long", day: "numeric", month: "long",
+}).format(new Date(`${today}T00:00:00`));
+
+// A dónde lleva el botón principal, según lo que toque hoy.
+const CTA: Record<string, { href: string; text: string }> = {
+  strength: { href: "/fuerza", text: "Registrar la sesión" },
+  running: { href: "/running/nueva", text: "Registrar la carrera" },
+  volleyball: { href: "/hidratacion", text: "Registrar hidratación" },
+  walk: { href: "/nutricion", text: "Registrar la comida" },
+  rest: { href: "/nutricion", text: "Registrar la comida" },
+};
+const cta = CTA[dayPlan.kind]!;
 ---
 
-<Layout title="Dashboard" currentPage="inicio">
+<Layout title="Inicio" currentPage="inicio">
   <Toast />
-  <div
-    class="px-4 py-6 lg:px-8 lg:py-8 max-w-4xl mx-auto"
-    id="dashboard-root"
-    data-name={displayName}
-    data-today={today}
-    data-plan-start={planStartDate}
-    data-plan-weeks={String(planWeeks)}
-    data-plan-week={String(planWeek)}
-    data-water-total={String(waterTotalMl)}
-    data-water-goal={String(waterGoalMl)}
-  >
-    <!-- Loading state -->
-    <div id="dashboard-loading" class="text-muted text-sm">Cargando...</div>
-    <!-- Content (hidden until JS runs) -->
-    <div id="dashboard-content" class="hidden space-y-6">
-      <!-- A) Hero -->
-      <section>
-        <p id="hero-greeting" class="text-muted text-sm mb-0.5"></p>
-        <h1 id="hero-date" class="text-xl font-semibold text-primary mb-3"></h1>
-        <div id="hero-badge-row" class="flex items-center gap-2 mb-4 flex-wrap">
-        </div>
-        <div id="session-type-row" class="flex items-center gap-3 mb-5"></div>
-        <a
-          id="cta-btn"
-          href="#"
-          class="inline-flex items-center gap-2 bg-blue text-white font-bold px-5 py-3 rounded-xl hover:bg-yellow/90 hover:text-black active:scale-95 transition-all text-sm"
-        >
-          <svg
-            class="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            ><circle cx="12" cy="12" r="10"></circle><line
-              x1="12"
-              y1="8"
-              x2="12"
-              y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg
-          >
-          Registrar sesión de hoy
-        </a>
-      </section>
+  <div class="mx-auto max-w-4xl space-y-4 px-4 py-6 lg:px-8 lg:py-8">
+    <!-- Hoy -->
+    <section>
+      <p class="text-sm text-muted">{greeting}, {displayName}</p>
+      <h1 class="mt-0.5 text-lg font-semibold capitalize text-primary">{dateLabel}</h1>
 
-      <!-- Week bar -->
-      <div id="week-bar-wrapper"></div>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-surface2 px-3 py-1 text-xs text-muted">
+          Semana {planWeek} · {blockLabel(planWeek)}
+        </span>
+        {
+          isDeloadWeek(planWeek) && (
+            <span class="rounded-full border border-orange/30 bg-orange/15 px-3 py-1 text-xs text-orange">
+              Semana de descarga
+            </span>
+          )
+        }
+      </div>
 
-      <!-- B) Metrics -->
-      <section>
-        <h2 class="text-xs text-muted uppercase tracking-wider mb-3">
-          Métricas rápidas
-        </h2>
-        <WaterCard totalMl={waterTotalMl} goalMl={waterGoalMl} date={today} />
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <span class="font-display text-3xl text-yellow">{dayPlan.label.toUpperCase()}</span>
+        {
+          sessionDone && (
+            <span class="flex items-center gap-1 text-sm text-yellow">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              {todaySession!.sessionCompletionPct}% completada
+            </span>
+          )
+        }
+      </div>
+      <p class="mt-1 text-sm text-muted">{dayPlan.detail}</p>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3" id="metrics-grid">
-        </div>
-      </section>
+      <a href={cta.href}
+        class="mt-4 inline-flex items-center gap-2 rounded-xl bg-yellow px-5 py-3 text-sm font-bold text-ink transition-all hover:opacity-90 active:scale-95">
+        {cta.text}
+      </a>
+    </section>
 
-      <!-- C) Mini calendar -->
-      <section>
-        <h2 class="text-xs text-muted uppercase tracking-wider mb-3">
-          Esta semana
-        </h2>
-        <div
-          class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"
-          id="week-pills"
-        >
-        </div>
-      </section>
-
-      <!-- D) Recent notes -->
-      <section id="notes-section">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-xs text-muted uppercase tracking-wider">
-            Últimas notas
-          </h2>
-          <a href="/notas" class="text-xs text-blue hover:underline"
-            >Ver todas →</a
-          >
-        </div>
-        <div id="notes-list" class="space-y-2"></div>
-      </section>
+    <!-- Métricas del plan -->
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {
+        [
+          { label: "Racha", value: String(streak), unit: streak === 1 ? "día" : "días" },
+          { label: "Esta semana", value: `${weekAdherence.pct}%`, unit: `${weekAdherence.completed}/${weekAdherence.required}` },
+          { label: "Proteína hoy", value: String(macroTotals.proteinG), unit: `de ${macroGoals.proteinG} g` },
+          { label: "Semana del plan", value: `${planWeek}`, unit: `de ${planWeeks}` },
+        ].map((metric) => (
+          <div class="rounded-xl border border-border bg-surface p-4">
+            <p class="text-xs uppercase tracking-wider text-muted">{metric.label}</p>
+            <p class="mt-1 text-2xl font-bold text-primary">
+              {metric.value}
+              <span class="ml-1 text-sm font-normal text-muted">{metric.unit}</span>
+            </p>
+          </div>
+        ))
+      }
     </div>
+
+    <WaterCard totalMl={waterDay?.totalMl ?? 0} goalMl={waterGoalMl} date={today} />
+
+    <!-- Macros de hoy, resumidos -->
+    <section class="rounded-xl border border-border bg-surface p-4">
+      <div class="mb-3 flex items-center justify-between gap-2">
+        <a href="/nutricion" class="flex items-center gap-2 text-xs uppercase tracking-wider text-muted transition-colors hover:text-primary">
+          <Icon name="nutricion" class="w-4 h-4 text-yellow" />
+          Nutrición
+        </a>
+        <span class="text-xs tabular-nums text-muted">
+          <strong class="text-primary">{macroTotals.kcal}</strong> / {macroGoals.kcal} kcal
+        </span>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        {
+          [
+            { label: "Proteína", value: macroTotals.proteinG, goal: macroGoals.proteinG, pct: macroPct.proteinG, color: "bg-yellow" },
+            { label: "Carbos", value: macroTotals.carbsG, goal: macroGoals.carbsG, pct: macroPct.carbsG, color: "bg-[#3b82f6]" },
+            { label: "Grasa", value: macroTotals.fatG, goal: macroGoals.fatG, pct: macroPct.fatG, color: "bg-[#059669]" },
+          ].map((macro) => (
+            <div>
+              <div class="flex items-baseline justify-between text-xs">
+                <span class="text-muted">{macro.label}</span>
+                <span class="tabular-nums text-muted2">{macro.value}/{macro.goal}</span>
+              </div>
+              <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-surface2">
+                <div class:list={["h-full rounded-full", macro.color]} style={`width:${Math.min(100, macro.pct)}%`} />
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- Semana de un vistazo -->
+    <section class="rounded-xl border border-border bg-surface p-4">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="text-xs uppercase tracking-wider text-muted">Últimos 7 días</h2>
+        <a href="/calendario" class="text-xs text-blue hover:underline">Calendario</a>
+      </div>
+      <div class="grid grid-cols-7 gap-1.5">
+        {
+          recent.slice(-7).map((day) => {
+            const label = new Intl.DateTimeFormat("es-MX", { weekday: "narrow" })
+              .format(new Date(`${day.date}T00:00:00`));
+            const tone =
+              day.status === "completed" ? "bg-yellow/20 border-yellow/40 text-primary"
+              : day.status === "partial" ? "bg-orange/15 border-orange/40 text-primary"
+              : day.status === "missed" ? "bg-surface2 border-border2 text-muted2"
+              : "border-border text-muted2";
+            return (
+              <a href={`/calendario?month=${day.date.slice(0, 7)}`}
+                class:list={["flex aspect-square flex-col items-center justify-center rounded-lg border text-xs transition-colors", tone]}
+                aria-label={`${day.date}: ${day.plannedLabel}`}>
+                <span class="uppercase">{label}</span>
+                <span class="tabular-nums">{Number(day.date.slice(-2))}</span>
+              </a>
+            );
+          })
+        }
+      </div>
+    </section>
   </div>
 </Layout>
-
-<script>
-  import {
-    getSessionTypeForDate,
-    getSession,
-    getStreak,
-    getWeekCompletion,
-    getBestPace,
-    getNotes,
-    toDateStr,
-  } from "../scripts/storage.js";
-
-  function escapeHtml(str: string) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
-  function init() {
-    const root = document.getElementById("dashboard-root")!;
-    const loading = document.getElementById("dashboard-loading")!;
-    const content = document.getElementById("dashboard-content")!;
-
-    // Los datos del plan vienen resueltos del servidor en data-attributes.
-    const name = root.dataset.name || "";
-    const todayStr = root.dataset.today!;
-    const planWeeks = Number(root.dataset.planWeeks) || 12;
-    const week = Number(root.dataset.planWeek) || 1;
-
-    loading.remove();
-    content.classList.remove("hidden");
-
-    const today = new Date(todayStr + "T00:00:00");
-    const hour = new Date().getHours();
-    const plan = getSessionTypeForDate(todayStr);
-    const todaySession = getSession(todayStr);
-
-    // Greeting
-    const greeting =
-      hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
-    document.getElementById("hero-greeting")!.textContent = `${greeting}, ${name}`;
-
-    // Date
-    const dateFmt = new Intl.DateTimeFormat("es-MX", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-    const dateStr = dateFmt.format(today);
-    document.getElementById("hero-date")!.textContent =
-      dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-
-    // Bloques de 4 semanas (rutina.md §4C). La cuarta es de descarga, y eso
-    // cambia cómo hay que entrenar ese día, así que se avisa.
-    const BLOCK_LABELS = ["Introducción", "Acumulación", "Intensificación", "Descarga"];
-    const blockWeek = ((week - 1) % 4) + 1;
-    const phase = BLOCK_LABELS[blockWeek - 1]!;
-    const isDeload = blockWeek === 4;
-    document.getElementById("hero-badge-row")!.innerHTML = `
-      <span class="text-xs bg-surface2 text-muted px-3 py-1 rounded-full">Semana ${week} · ${phase}</span>
-      ${isDeload ? '<span class="text-xs px-3 py-1 rounded-full bg-orange/15 text-orange border border-orange/30">Semana de descarga</span>' : ""}
-    `;
-
-    // Session type
-    const colorMap: any = {
-      fuerza: "#e8ff47",
-      cardio: "#47c2ff",
-      mixto: "#ff6b35",
-      descanso: "#8890a8",
-      voleibol: "#47c2ff",
-    };
-    const typeRow = document.getElementById("session-type-row")!;
-    const color = colorMap[plan.type] || "#8890a8";
-    typeRow.innerHTML = `
-      <span class="font-display text-3xl" style="color:${color}">${plan.label.toUpperCase()}</span>
-      ${todaySession?.completed ? '<span class="text-green-400 text-sm flex items-center gap-1"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Completada</span>' : ""}
-    `;
-
-    // CTA
-    (document.getElementById("cta-btn") as HTMLAnchorElement).href =
-      `/day/?date=${todayStr}`;
-
-    // Week bar
-    const planStart = new Date(root.dataset.planStart + "T00:00:00");
-    const daysElapsed = Math.floor(
-      (today.getTime() - planStart.getTime()) / (1000 * 60 * 60 * 24),
-    );
-    const daysRemaining = Math.max(0, planWeeks * 7 - daysElapsed);
-    const daysLabel =
-      daysRemaining === 0
-        ? "¡Plan completado!"
-        : `${daysRemaining} días restantes`;
-
-    document.getElementById("week-bar-wrapper")!.innerHTML = `
-      <div class="space-y-1.5">
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-muted">Semana <strong class="text-primary">${week}</strong> de ${planWeeks}</span>
-          <span class="text-muted">${phase}</span>
-        </div>
-        <div class="h-1.5 bg-surface2 rounded-full overflow-hidden">
-          <div class="h-full bg-blue rounded-full transition-all duration-500" style="width:${Math.round((week / planWeeks) * 100)}%"></div>
-        </div>
-        <div class="text-[11px] text-muted2 text-right">${daysLabel}</div>
-      </div>
-    `;
-
-    // Metrics
-    const streak = getStreak();
-    const weekComp = getWeekCompletion();
-    const bestPace = getBestPace();
-    const waterTotalMl = Number(root.dataset.waterTotal) || 0;
-    const waterGoalMl = Number(root.dataset.waterGoal) || 0;
-
-    const metricsGrid = document.getElementById("metrics-grid")!;
-    const metrics = [
-      { label: "Racha actual", value: streak.toString(), unit: "días" },
-      {
-        label: "Esta semana",
-        value: `${weekComp.completed} / ${weekComp.total}`,
-        unit: "sesiones",
-      },
-      {
-        label: "Último ritmo 5K",
-        value: bestPace || "—",
-        unit: bestPace ? "min/km" : "",
-      },
-      {
-        label: "Agua hoy",
-        value: waterGoalMl > 0 ? `${Math.round((waterTotalMl / waterGoalMl) * 100)}%` : "—",
-        unit: waterGoalMl > 0 ? "de la meta" : "",
-      },
-    ];
-    metricsGrid.innerHTML = metrics
-      .map(
-        (m) => `
-      <div class="bg-surface border border-border rounded-xl p-4 flex flex-col gap-1">
-        <span class="text-xs text-muted uppercase tracking-wider">${m.label}</span>
-        <div class="flex items-baseline gap-1 mt-1">
-          <span class="text-2xl font-bold text-primary">${m.value}</span>
-          ${m.unit ? `<span class="text-sm text-muted">${m.unit}</span>` : ""}
-        </div>
-      </div>
-    `,
-      )
-      .join("");
-
-    // Week pills
-    const weekPills = document.getElementById("week-pills")!;
-    const startOfWeek = new Date(today);
-    const dow = today.getDay();
-    const mondayOffset = dow === 0 ? -6 : 1 - dow;
-    startOfWeek.setDate(today.getDate() + mondayOffset);
-
-    const pillsHtml: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(startOfWeek);
-      d.setDate(startOfWeek.getDate() + i);
-      const dStr = toDateStr(d);
-      const sesh = getSession(dStr);
-      const planDay = getSessionTypeForDate(dStr);
-      const isToday = dStr === todayStr;
-      const dayInitials = ["D", "L", "M", "X", "J", "V", "S"];
-      const initial = dayInitials[d.getDay()];
-      const dayNum = d.getDate();
-      const dotColorMap = {
-        fuerza: "bg-green-300",
-        cardio: "bg-blue",
-        mixto: "bg-orange",
-        descanso: "bg-muted",
-        voleibol: "bg-blue",
-      };
-      const dotColor = dotColorMap[sesh?.type || planDay?.type] || "bg-muted2";
-      const borderClass = isToday
-        ? "border-2 border-blue bg-yellow/5"
-        : "border border-border bg-surface";
-      const completedIcon = sesh?.completed
-        ? `<svg class="w-3.5 h-3.5 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
-        : `<span class="w-2 h-2 rounded-full ${dotColor}"></span>`;
-      pillsHtml.push(`
-        <a href="/day/?date=${dStr}" class="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[52px] shrink-0 ${borderClass}">
-          <span class="text-[10px] uppercase tracking-wider ${isToday ? "text-blue" : "text-muted"}">${initial}</span>
-          <span class="text-sm font-semibold ${isToday ? "text-blue" : "text-primary"}">${dayNum}</span>
-          ${completedIcon}
-        </a>
-      `);
-    }
-    weekPills.innerHTML = pillsHtml.join("");
-
-    // Notes
-    const notes = getNotes().slice(0, 3);
-    const notesList = document.getElementById("notes-list")!;
-    if (notes.length === 0) {
-      notesList.innerHTML = `
-        <div class="bg-surface border border-border rounded-xl p-6 text-center">
-          <svg class="w-8 h-8 text-muted2 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <p class="text-sm text-muted">No hay notas aún.</p>
-          <a href="/notas" class="text-xs text-yellow mt-1 inline-block hover:underline">Crear primera nota →</a>
-        </div>
-      `;
-    } else {
-      notesList.innerHTML = notes
-        .map((n) => {
-          const noteDate = new Intl.DateTimeFormat("es-MX", {
-            month: "short",
-            day: "numeric",
-          }).format(new Date(n.date + "T00:00:00"));
-          const preview =
-            (n.content || "").slice(0, 80) +
-            ((n.content || "").length > 80 ? "…" : "");
-          return `
-          <a href="/notas" class="block bg-surface border border-border rounded-xl p-4 hover:border-border2 transition-colors">
-            <div class="flex items-start justify-between gap-2">
-              <h3 class="text-sm font-semibold text-primary truncate">${escapeHtml(n.title || "Sin título")}</h3>
-              <span class="text-[10px] text-muted2 shrink-0">${noteDate}</span>
-            </div>
-            ${preview ? `<p class="text-xs text-muted mt-1 line-clamp-2">${escapeHtml(preview)}</p>` : ""}
-          </a>
-        `;
-        })
-        .join("");
-    }
-  }
-
-  document.addEventListener("astro:page-load", init);
-</script>

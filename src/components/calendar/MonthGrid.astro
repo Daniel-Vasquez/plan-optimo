@@ -1,0 +1,110 @@
+---
+import type { AttendanceDay } from '../../types/models';
+
+/**
+ * Rejilla mensual de asistencia.
+ *
+ * Cada celda codifica dos cosas distintas: el relleno dice si el día se
+ * cumplió, y los puntos qué tocaba. Separarlas permite ver de un vistazo
+ * tanto los huecos como el patrón del plan.
+ */
+export interface Props {
+  days: AttendanceDay[];
+  today: string;
+}
+
+const { days, today } = Astro.props;
+
+const STATUS_STYLE: Record<string, string> = {
+  completed: 'bg-yellow/15 border-yellow/40 text-primary',
+  partial: 'bg-orange/15 border-orange/40 text-primary',
+  missed: 'bg-surface2 border-border2 text-muted2',
+  rest: 'bg-transparent border-border text-muted2',
+  future: 'bg-transparent border-border text-muted',
+};
+
+const KIND_DOT: Record<string, string> = {
+  strength: 'bg-[#8b5cf6]',
+  running: 'bg-[#3b82f6]',
+  volleyball: 'bg-[#059669]',
+  walk: 'bg-[#ea580c]',
+  rest: 'bg-transparent',
+};
+
+// La rejilla empieza en lunes, como el plan.
+const first = days[0]!;
+const firstDow = new Date(`${first.date}T00:00:00`).getDay();
+const leading = firstDow === 0 ? 6 : firstDow - 1;
+
+const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+---
+
+<div class="rounded-xl border border-border2 bg-surface p-3 lg:p-5">
+  <div class="mb-2 grid grid-cols-7 gap-1.5">
+    {
+      WEEKDAYS.map((day) => (
+        <span class="text-center text-[11px] uppercase tracking-wider text-muted2">{day}</span>
+      ))
+    }
+  </div>
+
+  <div class="grid grid-cols-7 gap-1.5">
+    {Array.from({ length: leading }, () => <span aria-hidden="true" />)}
+
+    {
+      days.map((day) => {
+        const dayNumber = Number(day.date.slice(-2));
+        const isToday = day.date === today;
+        return (
+          <button
+            type="button"
+            class:list={[
+              'day-cell relative flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border transition-colors',
+              STATUS_STYLE[day.status],
+              isToday && 'ring-2 ring-blue',
+              day.isDeload && 'outline outline-1 outline-dashed outline-muted2/40',
+            ]}
+            data-date={day.date}
+            aria-label={`${day.date}: ${day.plannedLabel}`}
+          >
+            <span class="text-sm tabular-nums">{dayNumber}</span>
+            <span class="flex h-1.5 gap-0.5">
+              {day.plannedKind !== 'rest' && (
+                <span class:list={['h-1.5 w-1.5 rounded-full', KIND_DOT[day.plannedKind]]} aria-hidden="true" />
+              )}
+            </span>
+            {/* Micro-indicadores: agua y proteína cumplidas ese día. */}
+            <span class="absolute top-1 right-1 flex gap-0.5">
+              {day.water?.met && <span class="h-1 w-1 rounded-full bg-[#3b82f6]" aria-hidden="true" />}
+              {day.nutrition?.met && <span class="h-1 w-1 rounded-full bg-yellow" aria-hidden="true" />}
+            </span>
+          </button>
+        );
+      })
+    }
+  </div>
+
+  <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-3 text-[11px] text-muted">
+    <span class="flex items-center gap-1.5">
+      <span class="h-2.5 w-2.5 rounded border border-yellow/40 bg-yellow/15" aria-hidden="true"></span>
+      Completado
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="h-2.5 w-2.5 rounded border border-orange/40 bg-orange/15" aria-hidden="true"></span>
+      Parcial
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="h-2.5 w-2.5 rounded border border-border2 bg-surface2" aria-hidden="true"></span>
+      Sin registrar
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="h-1.5 w-1.5 rounded-full bg-[#8b5cf6]" aria-hidden="true"></span> Fuerza
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="h-1.5 w-1.5 rounded-full bg-[#3b82f6]" aria-hidden="true"></span> Carrera
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="h-1.5 w-1.5 rounded-full bg-[#059669]" aria-hidden="true"></span> Voleibol
+    </span>
+  </div>
+</div>

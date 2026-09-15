@@ -2,7 +2,7 @@ import type { Collection } from 'mongodb';
 import { getDb } from './client';
 import { COLLECTIONS } from './schema';
 import type {
-  Food, NutritionLog, Profile, RunningSession, StrengthSession, WaterLog,
+  Food, Note, NutritionLog, Profile, RunningSession, StrengthSession, WaterLog,
 } from '../../types/models';
 
 /**
@@ -33,4 +33,8 @@ export function nutritionLogsCollection(): Collection<NutritionLog> {
 
 export function foodsCollection(): Collection<Food> {
   return getDb().collection<Food>(COLLECTIONS.foods);
+}
+
+export function notesCollection(): Collection<Note> {
+  return getDb().collection<Note>(COLLECTIONS.notes);
 }

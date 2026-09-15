@@ -2,7 +2,7 @@
 
 Aplicación web de seguimiento de fitness, rendimiento físico y nutrición, construida sobre el plan de recomposición + 5K de 12 semanas descrito en [`rutina.md`](./rutina.md).
 
-> **Estado:** en migración (Tandas 1 a 6 de 8 completadas). La app ya es multiusuario: renderiza en servidor, guarda en MongoDB y exige sesión. Los módulos de fitness siguen leyendo de `localStorage` hasta que cada tanda los migre. El plan completo está en [`planificacion.md`](./planificacion.md).
+> **Estado:** en migración (Tandas 1 a 7 de 8 completadas). La app ya es multiusuario: renderiza en servidor, guarda en MongoDB y exige sesión. Los módulos de fitness siguen leyendo de `localStorage` hasta que cada tanda los migre. El plan completo está en [`planificacion.md`](./planificacion.md).
 
 ## Stack
 

@@ -29,6 +29,7 @@ export const COLLECTIONS = {
   strengthSessions: 'strength_sessions',
   nutritionLogs: 'nutrition_logs',
   foods: 'foods',
+  notes: 'notes',
 } as const;
 
 /**
@@ -98,6 +99,16 @@ export async function ensureIndexes(db: Db): Promise<string[]> {
   // Búsqueda por nombre. El índice de texto permite acentos y palabras sueltas.
   created.push(
     await foods.createIndex({ name: 'text' }, { name: 'name_text', default_language: 'spanish' }),
+  );
+
+  const notes = db.collection(COLLECTIONS.notes);
+  created.push(await notes.createIndex({ userId: 1, date: -1 }, { name: 'userId_date' }));
+  // Búsqueda por título y contenido desde la propia bitácora.
+  created.push(
+    await notes.createIndex(
+      { title: 'text', content: 'text' },
+      { name: 'note_text', default_language: 'spanish' },
+    ),
   );
 
   return created;

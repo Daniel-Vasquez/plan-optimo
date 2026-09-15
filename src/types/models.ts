@@ -303,3 +303,31 @@ export interface NutritionLog extends BaseDoc {
   totals: Macros;
   note: string;
 }
+
+/** Una nota libre de la bitácora. */
+export interface Note extends BaseDoc {
+  /** Día al que se refiere, no cuándo se escribió. */
+  date: DateStr;
+  title: string;
+  content: string;
+  tags: string[];
+}
+
+/** Estado de un día en el calendario de asistencia. */
+export type AttendanceStatus = 'completed' | 'partial' | 'missed' | 'rest' | 'future';
+
+/** Resumen de un día, calculado a partir de los registros de ese día. */
+export interface AttendanceDay {
+  date: DateStr;
+  planWeek: number;
+  isDeload: boolean;
+  /** Qué tocaba: fuerza, carrera, voleibol, caminata o descanso. */
+  plannedKind: string;
+  plannedLabel: string;
+  status: AttendanceStatus;
+  /** Sesión de fuerza del día, si la hubo. */
+  strength: { completionPct: number; volumeKg: number; templateId: string } | null;
+  running: { distanceKm: number; runType: string } | null;
+  water: { totalMl: number; goalMl: number; met: boolean } | null;
+  nutrition: { proteinG: number; goalProteinG: number; met: boolean } | null;
+}

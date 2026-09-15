@@ -2,7 +2,7 @@
 
 > **Documento de arquitectura y hoja de ruta.** Fase 1: análisis y planificación. No se ha escrito ni modificado código de aplicación.
 > **Fuentes del análisis:** estructura real del repositorio (`src/`, `astro.config.mjs`, `package.json`, `tailwind.config.js`) y el plan de entrenamiento `rutina.md`.
-> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-6 ✅ completadas · siguiente: Tanda 7 (calendario y dashboard).
+> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-7 ✅ completadas · siguiente: Tanda 8 (pulido y métricas corporales).
 
 ---
 
@@ -722,7 +722,7 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 ---
 
-### Tanda 7 — Calendario de asistencia y dashboard definitivo
+### Tanda 7 — Calendario de asistencia y dashboard definitivo ✅ *completada*
 
 **Objetivo:** cerrar el círculo — ver de un vistazo la adherencia real al plan.
 
@@ -733,8 +733,15 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 - Migración de `/notas` a Mongo.
 - Importador de datos de `localStorage` (`POST /api/migrate`).
 
-**Archivos a crear:** `src/lib/db/repos/attendance.ts`, `src/lib/attendance.ts`, `src/components/calendar/MonthGrid.astro`, `src/components/calendar/DayCell.astro`, `src/components/calendar/DayDetail.astro`, `src/pages/api/attendance.ts`, `src/pages/api/migrate.ts`, `src/lib/db/repos/notes.ts`, `src/pages/api/notes.ts`
-**Archivos a modificar:** `src/pages/calendar.astro` → `src/pages/calendario.astro`, `src/pages/index.astro`, `src/pages/notes.astro` → `src/pages/notas.astro`
+**Desvío del plan: no hay colección `attendance`.** Estaba previsto denormalizar la asistencia y mantenerla por *upsert* desde los cuatro caminos de escritura (fuerza, carrera, agua y nutrición). Se descartó: sincronizar desde cuatro sitios son cuatro oportunidades de que se desincronice y muestre una adherencia falsa, y lo que ahorra es pasar de cuatro consultas por rango a una. Con índices `{userId, date}` en las cuatro colecciones y un mes por pantalla, esa diferencia no se nota; la de tener datos que mienten, sí. La asistencia se calcula al leer.
+
+**Notas de ejecución**
+- El estado de un día lo decide **lo que el plan pedía**: el martes exige carrera *y* fuerza, así que hacer sólo una es `partial`. El agua y la proteína se muestran como indicadores pero **no tumban el día**: son metas diarias, no la sesión de entrenamiento.
+- Los días de descanso y los futuros quedan fuera del denominador de adherencia: no hay nada que cumplir. Un día parcial cuenta como medio.
+- La racha atraviesa los descansos sin sumarlos ni cortarla: el plan los prescribe.
+- **`localStorage` queda completamente retirado.** Se elimina `src/scripts/storage.js`, la página `/day` (superada por `/fuerza`, `/hidratacion`, `/running/nueva` y `/nutricion`) y cuatro componentes huérfanos. Con eso `astro check` pasa a **0 errores**, desde los 46 heredados.
+- `POST /api/migrate` importa el volcado antiguo. Es idempotente en el agua y descarta lo mal formado; las carreras sí podrían duplicarse al reimportar, así que la respuesta informa de cuántas creó.
+- 19 pruebas nuevas (171 en total).
 
 **Requiero de tu lado:** nada.
 
