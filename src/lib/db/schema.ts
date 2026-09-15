@@ -27,6 +27,8 @@ export const COLLECTIONS = {
   waterLogs: 'water_logs',
   runningSessions: 'running_sessions',
   strengthSessions: 'strength_sessions',
+  nutritionLogs: 'nutrition_logs',
+  foods: 'foods',
 } as const;
 
 /**
@@ -81,6 +83,21 @@ export async function ensureIndexes(db: Db): Promise<string[]> {
       { userId: 1, 'exercises.slug': 1, date: 1 },
       { name: 'userId_exerciseSlug_date' },
     ),
+  );
+
+  // Un documento de nutrición por día y usuario.
+  created.push(
+    await db
+      .collection(COLLECTIONS.nutritionLogs)
+      .createIndex({ userId: 1, date: -1 }, { unique: true, name: 'userId_date_unique' }),
+  );
+
+  const foods = db.collection(COLLECTIONS.foods);
+  // El buscador ordena por uso: los alimentos frecuentes primero.
+  created.push(await foods.createIndex({ userId: 1, usageCount: -1 }, { name: 'userId_usage' }));
+  // Búsqueda por nombre. El índice de texto permite acentos y palabras sueltas.
+  created.push(
+    await foods.createIndex({ name: 'text' }, { name: 'name_text', default_language: 'spanish' }),
   );
 
   return created;

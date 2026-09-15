@@ -1,0 +1,104 @@
+---
+import type { Macros } from '../../types/models';
+import { adherence } from '../../lib/nutrition';
+
+/**
+ * Resumen de macros del día.
+ *
+ * La proteína va aparte y en grande: `rutina.md §1` la señala como "el ajuste
+ * #1", con un déficit diagnosticado de ~60 g diarios. Darle el mismo peso
+ * visual que a la grasa escondería el único número que de verdad hay que mover.
+ *
+ * Se dibuja con SVG y no con una librería de gráficas: son cuatro arcos y un
+ * porcentaje, y cargar Chart.js para esto sólo añadiría peso.
+ */
+export interface Props {
+  totals: Macros;
+  goals: Macros;
+  dayType: 'training' | 'rest';
+}
+
+const { totals, goals, dayType } = Astro.props;
+const pct = adherence(totals, goals);
+
+/** Arco de progreso: se acota al 100% para que no dé más de una vuelta. */
+const RADIUS = 26;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const dash = (value: number) => `${(Math.min(100, value) / 100) * CIRCUMFERENCE} ${CIRCUMFERENCE}`;
+
+const secondary = [
+  { key: 'kcal', label: 'Calorías', value: totals.kcal, goal: goals.kcal, unit: 'kcal', pct: pct.kcal, color: '#ea580c' },
+  { key: 'carbsG', label: 'Carbos', value: totals.carbsG, goal: goals.carbsG, unit: 'g', pct: pct.carbsG, color: '#3b82f6' },
+  { key: 'fatG', label: 'Grasa', value: totals.fatG, goal: goals.fatG, unit: 'g', pct: pct.fatG, color: '#059669' },
+];
+
+const proteinPct = pct.proteinG;
+const proteinLeft = Math.max(0, Math.round((goals.proteinG - totals.proteinG) * 10) / 10);
+---
+
+<section class="rounded-xl border border-border2 bg-surface p-5">
+  <div class="mb-4 flex items-center justify-between gap-2">
+    <h2 class="text-sm font-semibold text-primary">Macros de hoy</h2>
+    <span class="rounded-full bg-surface2 px-2.5 py-1 text-xs text-muted">
+      {dayType === 'training' ? 'Día de entreno' : 'Día de descanso'}
+    </span>
+  </div>
+
+  <!-- Proteína: la métrica prioritaria del plan. -->
+  <div class="mb-5 rounded-xl border border-yellow/30 bg-yellow/10 p-4">
+    <div class="flex items-baseline justify-between gap-2">
+      <span class="text-xs uppercase tracking-wider text-muted">Proteína</span>
+      <span class="text-xs tabular-nums text-muted">
+        meta {goals.proteinG} g
+      </span>
+    </div>
+    <p class="mt-1 font-display text-4xl text-yellow">
+      <span id="protein-total">{totals.proteinG}</span><span class="text-2xl"> g</span>
+    </p>
+    <div class="mt-2 h-2 overflow-hidden rounded-full bg-surface2">
+      <div
+        id="protein-bar"
+        class="h-full rounded-full bg-yellow transition-[width] duration-500"
+        style={`width:${Math.min(100, proteinPct)}%`}
+        role="progressbar"
+        aria-valuenow={proteinPct}
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-label="Progreso de proteína"
+      >
+      </div>
+    </div>
+    <p id="protein-left" class="mt-1.5 text-xs text-muted">
+      {proteinLeft > 0 ? `Faltan ${proteinLeft} g` : 'Meta cumplida'}
+    </p>
+  </div>
+
+  <div class="grid grid-cols-3 gap-3">
+    {
+      secondary.map((macro) => (
+        <div class="text-center">
+          <div class="relative mx-auto h-16 w-16">
+            <svg viewBox="0 0 64 64" class="h-16 w-16 -rotate-90" aria-hidden="true">
+              <circle cx="32" cy="32" r={RADIUS} fill="none" stroke="rgb(var(--rgb-surface2))" stroke-width="6" />
+              <circle
+                cx="32" cy="32" r={RADIUS} fill="none"
+                stroke={macro.color} stroke-width="6" stroke-linecap="round"
+                stroke-dasharray={dash(macro.pct)}
+                data-ring={macro.key}
+                class="transition-[stroke-dasharray] duration-500"
+              />
+            </svg>
+            <span
+              class="absolute inset-0 flex items-center justify-center text-xs font-semibold tabular-nums text-primary"
+              data-ring-pct={macro.key}
+            >{macro.pct}%</span>
+          </div>
+          <p class="mt-1.5 text-xs text-muted">{macro.label}</p>
+          <p class="text-xs tabular-nums text-muted2">
+            <span data-macro={macro.key}>{macro.value}</span> / {macro.goal} {macro.unit}
+          </p>
+        </div>
+      ))
+    }
+  </div>
+</section>

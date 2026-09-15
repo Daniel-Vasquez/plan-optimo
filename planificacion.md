@@ -2,7 +2,7 @@
 
 > **Documento de arquitectura y hoja de ruta.** Fase 1: análisis y planificación. No se ha escrito ni modificado código de aplicación.
 > **Fuentes del análisis:** estructura real del repositorio (`src/`, `astro.config.mjs`, `package.json`, `tailwind.config.js`) y el plan de entrenamiento `rutina.md`.
-> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-5 ✅ completadas · siguiente: Tanda 6 (nutrición).
+> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-6 ✅ completadas · siguiente: Tanda 7 (calendario y dashboard).
 
 ---
 
@@ -694,7 +694,7 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 ---
 
-### Tanda 6 — Nutrición
+### Tanda 6 — Nutrición ✅ *completada*
 
 **Objetivo:** registrar la alimentación diaria contra las metas de macros del plan.
 
@@ -708,7 +708,17 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 **Archivos a crear:** `src/pages/nutricion/index.astro`, `src/pages/nutricion/[date].astro`, `src/pages/nutricion/alimentos.astro`, `src/components/nutrition/MacroRings.astro`, `src/components/nutrition/MealCard.astro`, `src/components/nutrition/FoodSearch.astro`, `src/components/nutrition/FoodForm.astro`, `src/lib/db/repos/nutrition.ts`, `src/lib/db/repos/foods.ts`, `src/lib/nutrition.ts`, `src/data/foods-seed.ts`, `src/pages/api/nutrition.ts`, `src/pages/api/foods.ts`
 
-**Requiero de tu lado:** confirmar si quieres integración con una base de alimentos externa (Open Food Facts es gratuita y sin API key) o si basta con tu catálogo personal. **Recomiendo empezar con el catálogo personal** — tu dieta es repetitiva y una base externa añade ruido y latencia sin aportar mucho.
+**Notas de ejecución**
+- Se siguió la recomendación: **catálogo propio**, sin base externa. 24 alimentos sembrados de la dieta real de `rutina.md §1`, incluidas las fuentes de proteína que el propio documento recomienda añadir (yogurt griego, requesón, atún, whey).
+- La siembra es **perezosa**: ocurre al pedir la lista por primera vez, no al registrarse. Así no retrasa el alta y alcanza también a las cuentas creadas antes de esta tanda.
+- El tipo de día sale del plan: miércoles y viernes son de descanso (2.050 kcal), el resto de entreno (2.350). **La proteína no cambia entre ambos**: es el ajuste #1 del plan y no depende de si se entrena.
+- Cada item guarda sus macros **por 100 g**, no sólo los ya calculados. Así el registro histórico sobrevive a que el alimento se edite o se borre del catálogo.
+- La adherencia **no se acota al 100%**: comer 200 g de proteína con meta de 130 debe verse, no ocultarse.
+- El alta manual calcula las kcal con 4/4/9 si se dejan vacías, y avisa si las escritas no cuadran con los macros. Una prueba valida esa coherencia en los 24 alimentos semilla: un dedazo ahí se propagaría a todos los registros.
+- Duplicar el día anterior genera identificadores nuevos: borrar un item en un día no debe afectar al otro.
+- 20 pruebas nuevas (152 en total).
+
+**Requiero de tu lado:** nada.
 
 ---
 

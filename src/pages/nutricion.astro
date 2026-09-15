@@ -1,20 +1,342 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import ComingSoon from "../components/ComingSoon.astro";
+import Toast from "../components/Toast.astro";
+import MacroRings from "../components/nutrition/MacroRings.astro";
+import MealCard from "../components/nutrition/MealCard.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import { getNutritionDay } from "../lib/db/repos/nutrition";
+import { todayInTimezone, parseDateStr, toDateStr } from "../lib/date";
+import { MEAL_SLOTS, ZERO_MACROS, dayTypeFor, goalsFor } from "../lib/nutrition";
+
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+const timezone = profile?.timezone ?? "America/Mexico_City";
+
+const param = Astro.url.searchParams.get("date");
+const today = todayInTimezone(timezone);
+const date = param && /^\d{4}-\d{2}-\d{2}$/.test(param) ? param : today;
+
+const day = await getNutritionDay(user.id, date);
+const goals = goalsFor(profile, date);
+const totals = day?.totals ?? ZERO_MACROS;
+
+const mealBySlot = Object.fromEntries((day?.meals ?? []).map((meal) => [meal.slot, meal]));
+
+const previous = toDateStr(new Date(parseDateStr(date).getTime() - 86_400_000));
+const next = toDateStr(new Date(parseDateStr(date).getTime() + 86_400_000));
+
+const dateLabel = new Intl.DateTimeFormat("es-MX", {
+  weekday: "long", day: "numeric", month: "long",
+}).format(new Date(`${date}T00:00:00`));
 ---
 
 <Layout title="Nutrición" currentPage="nutricion">
-  <ComingSoon
-    title="Nutrición"
-    icon="nutricion"
-    tanda={6}
-    description="Registro diario de comidas contra las metas de macros del plan, con la proteína como métrica destacada."
-    features={[
-      "Comidas por franja: desayuno, comida, cena, snack, pre y post-entreno",
-      "Anillos de kcal, proteína, carbohidratos y grasa frente a la meta del día",
-      "Meta alta o baja según sea día de entreno o de descanso",
-      "Catálogo propio de alimentos con favoritos y recientes",
-      "Duplicar el día anterior, porque la dieta es repetitiva",
-    ]}
-  />
+  <Toast />
+  <div
+    class="mx-auto max-w-2xl space-y-4 px-4 py-6 lg:px-8 lg:py-8"
+    id="nutrition-root"
+    data-date={date}
+    data-goals={JSON.stringify(goals)}
+  >
+    <div class="flex items-center justify-between gap-2">
+      <h1 class="font-display text-3xl text-primary">NUTRICIÓN</h1>
+      <a href="/nutricion/alimentos" class="text-xs text-blue hover:underline">Alimentos</a>
+    </div>
+
+    <!-- Navegación por días: registrar la cena de ayer a la mañana siguiente
+         es un caso normal, no una excepción. -->
+    <div class="flex items-center justify-between gap-2 rounded-xl border border-border2 bg-surface px-2 py-2">
+      <a href={`/nutricion?date=${previous}`} aria-label="Día anterior"
+        class="rounded-lg p-2 text-muted transition-colors hover:bg-surface2 hover:text-primary">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          ><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </a>
+      <p class="text-sm capitalize text-primary">{dateLabel}</p>
+      {
+        date < today ? (
+          <a href={`/nutricion?date=${next}`} aria-label="Día siguiente"
+            class="rounded-lg p-2 text-muted transition-colors hover:bg-surface2 hover:text-primary">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              ><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </a>
+        ) : (
+          <span class="w-8" aria-hidden="true" />
+        )
+      }
+    </div>
+
+    <MacroRings totals={totals} goals={goals} dayType={dayTypeFor(date)} />
+
+    <button id="duplicate-btn" type="button"
+      class="w-full rounded-xl border border-border2 bg-surface py-3 text-sm font-semibold text-muted transition-colors hover:bg-surface2 hover:text-primary">
+      Duplicar el último día registrado
+    </button>
+
+    <div class="space-y-3">
+      {MEAL_SLOTS.map((slot) => <MealCard slot={slot} meal={mealBySlot[slot] ?? null} />)}
+    </div>
+  </div>
+
+  <!-- Buscador: se abre sobre la pantalla al pulsar "añadir" en una comida. -->
+  <div id="food-picker" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-xs">
+    <div class="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-hidden rounded-t-2xl border-t border-border2 bg-surface md:inset-x-auto md:top-1/2 md:left-1/2 md:max-h-[70vh] md:w-full md:max-w-md md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border">
+      <div class="flex items-center gap-2 border-b border-border p-4">
+        <input id="food-search" type="search" autocomplete="off" placeholder="Buscar alimento..."
+          class="min-w-0 flex-1 rounded-lg border border-border2 bg-surface2 px-4 py-2.5 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-blue/50" />
+        <button id="picker-close" type="button" aria-label="Cerrar"
+          class="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-surface2 hover:text-primary">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            ><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <ul id="food-results" class="max-h-[60vh] divide-y divide-border overflow-y-auto"></ul>
+      <a href="/nutricion/alimentos" class="block border-t border-border py-3 text-center text-xs font-semibold text-blue hover:bg-blue/10">
+        Crear un alimento nuevo
+      </a>
+    </div>
+  </div>
 </Layout>
+
+<script>
+  import { adherence, macrosForGrams, sumMacros } from "../lib/nutrition";
+  import type { Macros } from "../types/models";
+
+  interface Food {
+    _id: string; name: string; servingGrams: number; favorite: boolean;
+    per100g: Macros;
+  }
+
+  function init() {
+    const root = document.getElementById("nutrition-root");
+    if (!root) return;
+
+    const date = root.dataset.date!;
+    const goals: Macros = JSON.parse(root.dataset.goals!);
+
+    const picker = document.getElementById("food-picker")!;
+    const searchInput = document.getElementById("food-search") as HTMLInputElement;
+    const results = document.getElementById("food-results")!;
+    let activeSlot: string | null = null;
+    let catalog: Food[] = [];
+
+    // ── Estado en memoria ───────────────────────────────────────────────
+    /** Se lee del DOM para no duplicar la fuente de verdad en una variable. */
+    function collectMeals() {
+      return [...document.querySelectorAll<HTMLElement>(".meal-card")].map((card) => ({
+        slot: card.dataset.slot,
+        items: [...card.querySelectorAll<HTMLElement>("[data-item-id]")].map((row) => ({
+          id: row.dataset.itemId,
+          foodId: row.dataset.foodId || null,
+          name: row.dataset.name,
+          grams: Number(row.dataset.grams),
+          per100g: JSON.parse(row.dataset.per100g!),
+        })),
+      })).filter((meal) => meal.items.length > 0);
+    }
+
+    function repaintTotals() {
+      const perMeal = [...document.querySelectorAll<HTMLElement>(".meal-card")].map((card) => {
+        const items = [...card.querySelectorAll<HTMLElement>("[data-item-id]")].map((row) => ({
+          macros: macrosForGrams(JSON.parse(row.dataset.per100g!), Number(row.dataset.grams)),
+        }));
+        const totals = sumMacros(items);
+        card.querySelector(".meal-protein")!.textContent = String(totals.proteinG);
+        card.querySelector(".meal-kcal")!.textContent = String(totals.kcal);
+        card.querySelector(".meal-empty")!.classList.toggle("hidden", items.length > 0);
+        return { macros: totals };
+      });
+
+      const totals = sumMacros(perMeal);
+      const pct = adherence(totals, goals);
+
+      document.getElementById("protein-total")!.textContent = String(totals.proteinG);
+      const bar = document.getElementById("protein-bar")!;
+      bar.style.width = `${Math.min(100, pct.proteinG)}%`;
+      bar.setAttribute("aria-valuenow", String(pct.proteinG));
+      const left = Math.max(0, Math.round((goals.proteinG - totals.proteinG) * 10) / 10);
+      document.getElementById("protein-left")!.textContent =
+        left > 0 ? `Faltan ${left} g` : "Meta cumplida";
+
+      const RADIUS = 26;
+      const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+      for (const key of ["kcal", "carbsG", "fatG"] as const) {
+        const ring = document.querySelector<SVGCircleElement>(`[data-ring="${key}"]`);
+        if (ring) {
+          ring.setAttribute(
+            "stroke-dasharray",
+            `${(Math.min(100, pct[key]) / 100) * CIRCUMFERENCE} ${CIRCUMFERENCE}`,
+          );
+        }
+        const label = document.querySelector(`[data-ring-pct="${key}"]`);
+        if (label) label.textContent = `${pct[key]}%`;
+        const value = document.querySelector(`[data-macro="${key}"]`);
+        if (value) value.textContent = String(totals[key]);
+      }
+    }
+
+    let saveTimer: number | undefined;
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(async () => {
+        await fetch("/api/nutrition", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ date, meals: collectMeals() }),
+        });
+      }, 700);
+    }
+
+    // ── Filas de alimento ───────────────────────────────────────────────
+    function addRow(slot: string, food: Food, grams: number) {
+      const card = document.querySelector<HTMLElement>(`.meal-card[data-slot="${slot}"]`)!;
+      const list = card.querySelector(".meal-items")!;
+      const macros = macrosForGrams(food.per100g, grams);
+
+      const li = document.createElement("li");
+      li.className = "flex items-center gap-3 px-4 py-2.5";
+      li.dataset.itemId = crypto.randomUUID();
+      li.dataset.foodId = food._id ?? "";
+      li.dataset.name = food.name;
+      li.dataset.grams = String(grams);
+      li.dataset.per100g = JSON.stringify(food.per100g);
+      li.innerHTML = `
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm text-primary"></p>
+          <p class="text-xs tabular-nums text-muted2">${grams} g · ${macros.proteinG} g prot · ${macros.kcal} kcal</p>
+        </div>
+        <button type="button" class="item-remove shrink-0 rounded-lg p-1.5 text-muted2 transition-colors hover:bg-surface2 hover:text-orange" aria-label="Quitar alimento">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>`;
+      // textContent y no innerHTML: el nombre puede venir de un alimento
+      // creado por el usuario y no debe interpretarse como marcado.
+      li.querySelector("p")!.textContent = food.name;
+      list.appendChild(li);
+
+      bindRemove(li);
+      repaintTotals();
+      scheduleSave();
+    }
+
+    function bindRemove(row: HTMLElement) {
+      row.querySelector(".item-remove")!.addEventListener("click", () => {
+        row.remove();
+        repaintTotals();
+        scheduleSave();
+      });
+    }
+
+    for (const row of document.querySelectorAll<HTMLElement>("[data-item-id]")) bindRemove(row);
+
+    // ── Buscador ────────────────────────────────────────────────────────
+    function renderResults(foods: Food[]) {
+      results.innerHTML = "";
+      if (foods.length === 0) {
+        const li = document.createElement("li");
+        li.className = "px-4 py-6 text-center text-sm text-muted";
+        li.textContent = "Sin resultados.";
+        results.appendChild(li);
+        return;
+      }
+
+      for (const food of foods) {
+        const li = document.createElement("li");
+        li.className = "flex items-center gap-3 px-4 py-3";
+        const info = document.createElement("div");
+        info.className = "min-w-0 flex-1";
+        const name = document.createElement("p");
+        name.className = "truncate text-sm text-primary";
+        name.textContent = `${food.favorite ? "★ " : ""}${food.name}`;
+        const macros = document.createElement("p");
+        macros.className = "text-xs tabular-nums text-muted2";
+        macros.textContent = `${food.per100g.proteinG} g prot · ${food.per100g.kcal} kcal / 100 g`;
+        info.append(name, macros);
+
+        const grams = document.createElement("input");
+        grams.type = "number";
+        grams.min = "1";
+        grams.max = "5000";
+        grams.value = String(food.servingGrams);
+        grams.className = "w-20 shrink-0 rounded-lg border border-border2 bg-surface2 px-2 py-1.5 text-sm tabular-nums text-primary focus:outline-hidden focus:border-blue/50";
+        grams.setAttribute("aria-label", `Gramos de ${food.name}`);
+
+        const add = document.createElement("button");
+        add.type = "button";
+        add.className = "shrink-0 rounded-lg bg-blue px-3 py-1.5 text-xs font-bold text-white active:scale-95";
+        add.textContent = "Añadir";
+        add.addEventListener("click", () => {
+          const value = Number(grams.value);
+          if (!Number.isFinite(value) || value <= 0) return;
+          addRow(activeSlot!, food, value);
+          closePicker();
+        });
+
+        li.append(info, grams, add);
+        results.appendChild(li);
+      }
+    }
+
+    async function loadFoods(query = "") {
+      const response = await fetch(`/api/foods?q=${encodeURIComponent(query)}`);
+      if (!response.ok) return;
+      catalog = (await response.json()).foods;
+      renderResults(catalog);
+    }
+
+    function openPicker(slot: string) {
+      activeSlot = slot;
+      picker.classList.remove("hidden");
+      searchInput.value = "";
+      searchInput.focus();
+      loadFoods();
+    }
+
+    function closePicker() {
+      picker.classList.add("hidden");
+      activeSlot = null;
+    }
+
+    document.getElementById("picker-close")!.addEventListener("click", closePicker);
+    picker.addEventListener("click", (event) => {
+      if (event.target === picker) closePicker();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !picker.classList.contains("hidden")) closePicker();
+    });
+
+    let searchTimer: number | undefined;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(() => loadFoods(searchInput.value), 220);
+    });
+
+    for (const button of document.querySelectorAll<HTMLElement>(".meal-add")) {
+      button.addEventListener("click", () => {
+        const slot = button.closest<HTMLElement>(".meal-card")!.dataset.slot!;
+        openPicker(slot);
+      });
+    }
+
+    // ── Duplicar día ────────────────────────────────────────────────────
+    document.getElementById("duplicate-btn")!.addEventListener("click", async () => {
+      const response = await fetch("/api/nutrition?action=duplicate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ date }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        window.showToast?.(body.error ?? "No se pudo duplicar", "error");
+        return;
+      }
+
+      const { copiedFrom } = await response.json();
+      window.showToast?.(`Copiado desde el ${copiedFrom}`);
+      setTimeout(() => window.location.reload(), 700);
+    });
+  }
+
+  document.addEventListener("astro:page-load", init);
+</script>

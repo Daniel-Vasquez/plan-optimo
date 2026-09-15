@@ -1,0 +1,72 @@
+---
+import type { Meal, MealSlot } from '../../types/models';
+import { MEAL_LABELS, ZERO_MACROS } from '../../lib/nutrition';
+
+/**
+ * Una franja de comida con sus alimentos.
+ *
+ * Se renderizan las seis franjas aunque estén vacías: ver "Cena — 0 g" es lo
+ * que recuerda que falta registrarla, y en la dieta diagnosticada la cena es
+ * justo el mayor hueco de proteína.
+ */
+export interface Props {
+  slot: MealSlot;
+  meal: Meal | null;
+}
+
+const { slot, meal } = Astro.props;
+const totals = meal?.totals ?? ZERO_MACROS;
+const items = meal?.items ?? [];
+---
+
+<section class="meal-card rounded-xl border border-border2 bg-surface" data-slot={slot}>
+  <header class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+    <h3 class="text-sm font-semibold text-primary">{MEAL_LABELS[slot]}</h3>
+    <span class="text-xs tabular-nums text-muted">
+      <span class="meal-protein text-primary">{totals.proteinG}</span> g prot ·
+      <span class="meal-kcal">{totals.kcal}</span> kcal
+    </span>
+  </header>
+
+  <ul class="meal-items divide-y divide-border">
+    {
+      items.map((item) => (
+        <li
+          class="flex items-center gap-3 px-4 py-2.5"
+          data-item-id={item.id}
+          data-food-id={item.foodId ?? ''}
+          data-name={item.name}
+          data-grams={String(item.grams)}
+          data-per100g={JSON.stringify(item.per100g)}
+        >
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm text-primary">{item.name}</p>
+            <p class="text-xs tabular-nums text-muted2">
+              {item.grams} g · {item.macros.proteinG} g prot · {item.macros.kcal} kcal
+            </p>
+          </div>
+          <button
+            type="button"
+            class="item-remove shrink-0 rounded-lg p-1.5 text-muted2 transition-colors hover:bg-surface2 hover:text-orange"
+            aria-label={`Quitar ${item.name}`}
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="meal-empty px-4 py-3 text-xs text-muted2" class:list={[items.length > 0 && 'hidden']}>
+    Sin registrar.
+  </p>
+
+  <button
+    type="button"
+    class="meal-add w-full border-t border-border py-2.5 text-xs font-semibold text-blue transition-colors hover:bg-blue/10"
+  >
+    + Añadir alimento
+  </button>
+</section>

@@ -1,0 +1,193 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Toast from "../../components/Toast.astro";
+import { searchFoods } from "../../lib/db/repos/foods";
+
+const user = Astro.locals.user!;
+const foods = await searchFoods(user.id, "", 200);
+
+const field =
+  "w-full rounded-lg border border-border2 bg-surface2 px-3 py-2.5 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-blue/50 transition-colors";
+const label = "block text-xs uppercase tracking-wider text-muted mb-1.5";
+---
+
+<Layout title="Alimentos" currentPage="nutricion">
+  <Toast />
+  <div class="mx-auto max-w-2xl space-y-5 px-4 py-6 lg:px-8 lg:py-8">
+    <a href="/nutricion" class="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-primary">
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        ><polyline points="15 18 9 12 15 6"></polyline></svg>
+      Nutrición
+    </a>
+
+    <h1 class="font-display text-3xl text-primary">ALIMENTOS</h1>
+
+    <form id="food-form" class="space-y-4 rounded-xl border border-border2 bg-surface p-5" novalidate>
+      <h2 class="text-sm font-semibold text-primary">Nuevo alimento</h2>
+      <p class="text-xs text-muted">
+        Los macros se introducen <strong class="text-primary">por 100 g</strong>. Si dejas las
+        calorías vacías se calculan solas con 4/4/9.
+      </p>
+
+      <div>
+        <label class={label} for="name">Nombre</label>
+        <input id="name" name="name" type="text" maxlength="80" class={field} placeholder="Ej. Pechuga de pavo" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class={label} for="proteinG">Proteína (g)</label>
+          <input id="proteinG" name="proteinG" type="number" min="0" max="100" step="0.1" class={field} placeholder="31" />
+        </div>
+        <div>
+          <label class={label} for="carbsG">Carbos (g)</label>
+          <input id="carbsG" name="carbsG" type="number" min="0" max="100" step="0.1" class={field} placeholder="0" />
+        </div>
+        <div>
+          <label class={label} for="fatG">Grasa (g)</label>
+          <input id="fatG" name="fatG" type="number" min="0" max="100" step="0.1" class={field} placeholder="3.6" />
+        </div>
+        <div>
+          <label class={label} for="kcal">Calorías (opcional)</label>
+          <input id="kcal" name="kcal" type="number" min="0" max="900" class={field} placeholder="auto" />
+        </div>
+      </div>
+
+      <div>
+        <label class={label} for="servingGrams">Ración habitual (g)</label>
+        <input id="servingGrams" name="servingGrams" type="number" min="1" max="2000" class={field} placeholder="100" />
+      </div>
+
+      <p id="kcal-hint" class="hidden rounded-lg border border-orange/30 bg-orange/10 px-3 py-2 text-xs text-orange"></p>
+      <p id="form-error" class="hidden text-sm text-orange" role="alert"></p>
+
+      <button type="submit"
+        class="w-full rounded-lg bg-blue py-3 font-bold text-white transition-all hover:opacity-90 active:scale-95">
+        Guardar alimento
+      </button>
+    </form>
+
+    <section class="rounded-xl border border-border2 bg-surface">
+      <h2 class="border-b border-border px-5 py-3 text-sm font-semibold text-primary">
+        Tu catálogo <span class="font-normal text-muted">({foods.length})</span>
+      </h2>
+      <ul class="divide-y divide-border">
+        {
+          foods.map((food) => (
+            <li class="flex items-center gap-3 px-5 py-3" data-food-id={String(food._id)}>
+              <button
+                type="button"
+                class="fav-toggle shrink-0 text-lg transition-colors"
+                class:list={[food.favorite ? 'text-yellow' : 'text-muted2 hover:text-muted']}
+                aria-pressed={food.favorite}
+                aria-label={`Marcar ${food.name} como favorito`}
+              >★</button>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm text-primary">{food.name}</p>
+                <p class="text-xs tabular-nums text-muted2">
+                  {food.per100g.proteinG} g prot · {food.per100g.carbsG} g carb ·
+                  {food.per100g.fatG} g grasa · {food.per100g.kcal} kcal / 100 g
+                </p>
+              </div>
+              <span class="shrink-0 text-xs tabular-nums text-muted2">{food.servingGrams} g</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</Layout>
+
+<script>
+  import { kcalFromMacros } from "../../lib/nutrition";
+
+  function init() {
+    const form = document.getElementById("food-form") as HTMLFormElement | null;
+    if (!form) return;
+
+    const errorEl = document.getElementById("form-error")!;
+    const hintEl = document.getElementById("kcal-hint")!;
+    const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement).value.trim();
+    const num = (name: string) => (value(name) === "" ? null : Number(value(name)));
+
+    /** Avisa si las kcal escritas no cuadran con los macros: suele ser un dedazo. */
+    function checkCoherence() {
+      const p = num("proteinG");
+      const c = num("carbsG");
+      const f = num("fatG");
+      const declared = num("kcal");
+      if (p === null || c === null || f === null || declared === null) {
+        hintEl.classList.add("hidden");
+        return;
+      }
+      const calculated = kcalFromMacros({ proteinG: p, carbsG: c, fatG: f });
+      const drift = Math.abs(calculated - declared);
+      if (drift > Math.max(20, calculated * 0.15)) {
+        hintEl.textContent = `Con esos macros salen ~${calculated} kcal, no ${declared}. Revisa los valores.`;
+        hintEl.classList.remove("hidden");
+      } else {
+        hintEl.classList.add("hidden");
+      }
+    }
+
+    for (const name of ["proteinG", "carbsG", "fatG", "kcal"]) {
+      (form.elements.namedItem(name) as HTMLInputElement | null)?.addEventListener(
+        "input",
+        checkCoherence,
+      );
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorEl.classList.add("hidden");
+
+      if (!value("name")) {
+        errorEl.textContent = "Escribe el nombre del alimento.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      const response = await fetch("/api/foods", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: value("name"),
+          proteinG: num("proteinG") ?? 0,
+          carbsG: num("carbsG") ?? 0,
+          fatG: num("fatG") ?? 0,
+          kcal: num("kcal"),
+          servingGrams: num("servingGrams") ?? 100,
+        }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        errorEl.textContent = body.error ?? "No se pudo guardar.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      window.showToast?.("Alimento guardado");
+      setTimeout(() => window.location.reload(), 600);
+    });
+
+    for (const button of document.querySelectorAll<HTMLButtonElement>(".fav-toggle")) {
+      button.addEventListener("click", async () => {
+        const id = button.closest<HTMLElement>("[data-food-id]")!.dataset.foodId!;
+        const next = button.getAttribute("aria-pressed") !== "true";
+
+        button.setAttribute("aria-pressed", String(next));
+        button.classList.toggle("text-yellow", next);
+        button.classList.toggle("text-muted2", !next);
+
+        await fetch("/api/foods", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id, favorite: next }),
+        });
+      });
+    }
+  }
+
+  document.addEventListener("astro:page-load", init);
+</script>

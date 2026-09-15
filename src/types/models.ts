@@ -241,3 +241,65 @@ export interface StrengthSession extends BaseDoc {
   sleepHours: number | null;
   note: string;
 }
+
+/** Franja de comida. Coincide con la estructura real de la dieta en rutina.md §1. */
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'pre' | 'post';
+
+/** Día de entreno o de descanso: determina la meta de kcal y carbohidratos. */
+export type DayType = 'training' | 'rest';
+
+/** Macros de una cantidad concreta. */
+export interface Macros {
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}
+
+/** Un alimento del catálogo, con sus macros por 100 g. */
+export interface Food extends BaseDoc {
+  name: string;
+  brand: string | null;
+  /** Ración habitual en gramos, para no teclearla cada vez. */
+  servingGrams: number;
+  per100g: Macros;
+  favorite: boolean;
+  /** Cuántas veces se ha usado; ordena el buscador. */
+  usageCount: number;
+}
+
+/** Un alimento dentro de una comida, con la cantidad de ese día. */
+export interface MealItem {
+  id: string;
+  /** Referencia al catálogo. `null` si se escribió a mano y no se guardó. */
+  foodId: string | null;
+  name: string;
+  grams: number;
+  /**
+   * Macros por 100 g, copiados del catálogo al registrar. Se guardan aquí para
+   * que el registro histórico no dependa de que el alimento siga existiendo ni
+   * de que nadie haya corregido sus valores después.
+   */
+  per100g: Macros;
+  /** Macros ya calculados para ESTA cantidad. */
+  macros: Macros;
+}
+
+export interface Meal {
+  id: string;
+  slot: MealSlot;
+  items: MealItem[];
+  /** Suma de los items; desnormalizado para no recalcularlo al leer. */
+  totals: Macros;
+}
+
+/** La alimentación de un día. Un documento por día y usuario. */
+export interface NutritionLog extends BaseDoc {
+  date: DateStr;
+  dayType: DayType;
+  /** Instantánea de las metas de ese día, como en hidratación. */
+  goals: Macros;
+  meals: Meal[];
+  totals: Macros;
+  note: string;
+}

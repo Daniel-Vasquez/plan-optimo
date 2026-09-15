@@ -1,7 +1,9 @@
 import type { Collection } from 'mongodb';
 import { getDb } from './client';
 import { COLLECTIONS } from './schema';
-import type { Profile, RunningSession, StrengthSession, WaterLog } from '../../types/models';
+import type {
+  Food, NutritionLog, Profile, RunningSession, StrengthSession, WaterLog,
+} from '../../types/models';
 
 /**
  * Accesos tipados a las colecciones. Los nombres y los índices viven en
@@ -23,4 +25,12 @@ export function runningSessionsCollection(): Collection<RunningSession> {
 
 export function strengthSessionsCollection(): Collection<StrengthSession> {
   return getDb().collection<StrengthSession>(COLLECTIONS.strengthSessions);
+}
+
+export function nutritionLogsCollection(): Collection<NutritionLog> {
+  return getDb().collection<NutritionLog>(COLLECTIONS.nutritionLogs);
+}
+
+export function foodsCollection(): Collection<Food> {
+  return getDb().collection<Food>(COLLECTIONS.foods);
 }
