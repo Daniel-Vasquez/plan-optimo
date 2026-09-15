@@ -2,12 +2,16 @@
 import Layout from "../layouts/Layout.astro";
 import Toast from "../components/Toast.astro";
 import WaterCard from "../components/water/WaterCard.astro";
+import AdviceList from "../components/AdviceList.astro";
 import Icon from "../components/nav/Icon.astro";
 import { getProfile } from "../lib/db/repos/profiles";
 import { getAttendanceRange } from "../lib/db/repos/attendance";
 import { getWaterDay } from "../lib/db/repos/water";
 import { getNutritionDay } from "../lib/db/repos/nutrition";
 import { listStrengthSessions } from "../lib/db/repos/strength";
+import { listRuns } from "../lib/db/repos/running";
+import { listBodyMetrics } from "../lib/db/repos/body";
+import { evaluateAutoregulation } from "../lib/autoregulation";
 import { adherenceOf, attendanceStreak } from "../lib/attendance";
 import { planWeekFor, todayInTimezone, toDateStr, parseDateStr } from "../lib/date";
 import { blockLabel, dayPlanFor, isDeloadWeek } from "../lib/strength";
@@ -50,7 +54,22 @@ const macroGoals = goalsFor(profile, today);
 const macroTotals = nutritionDay?.totals ?? ZERO_MACROS;
 const macroPct = macroAdherence(macroTotals, macroGoals);
 
+const [recentRuns, bodyMetrics] = await Promise.all([
+  listRuns(user.id, 60),
+  listBodyMetrics(user.id, 120),
+]);
+
 const todaySession = strengthSessions.find((s) => s.date === today) ?? null;
+
+// Las reglas de rutina.md §4D se evalúan contra los datos reales y se muestran
+// el día que aplican.
+const advice = evaluateAutoregulation({
+  date: today,
+  runs: recentRuns,
+  strength: strengthSessions,
+  body: [...bodyMetrics].reverse(),
+  sleepHoursToday: todaySession?.sleepHours ?? null,
+});
 const sessionDone = (todaySession?.sessionCompletionPct ?? 0) > 0;
 
 const hour = Number(
@@ -116,6 +135,8 @@ const cta = CTA[dayPlan.kind]!;
       </a>
     </section>
 
+    <AdviceList advice={advice} />
+
     <!-- Métricas del plan -->
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {
@@ -174,7 +195,10 @@ const cta = CTA[dayPlan.kind]!;
     <section class="rounded-xl border border-border bg-surface p-4">
       <div class="mb-3 flex items-center justify-between">
         <h2 class="text-xs uppercase tracking-wider text-muted">Últimos 7 días</h2>
-        <a href="/calendario" class="text-xs text-blue hover:underline">Calendario</a>
+        <span class="flex gap-3">
+          <a href="/cuerpo" class="text-xs text-blue hover:underline">Cuerpo</a>
+          <a href="/calendario" class="text-xs text-blue hover:underline">Calendario</a>
+        </span>
       </div>
       <div class="grid grid-cols-7 gap-1.5">
         {

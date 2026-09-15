@@ -100,6 +100,18 @@ const waterPercent = profile
     />
     <slot name="head" />
     <ClientRouter />
+    <script is:inline>
+      // El service worker sólo cachea estáticos; no guarda páginas ni API.
+      // El detalle de por qué está en public/sw.js.
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js").catch(function () {
+            // Sin service worker la app funciona igual: sólo se pierden las
+            // recargas rápidas de CSS y JS.
+          });
+        });
+      }
+    </script>
   </head>
   <body class="bg-base min-h-screen font-body">
     <TopNav

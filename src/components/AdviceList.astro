@@ -1,0 +1,49 @@
+---
+import type { Advice } from '../lib/autoregulation';
+
+/**
+ * Avisos de autorregulación.
+ *
+ * `rutina.md §4D` llama obligatorias a estas reglas, pero hasta ahora había que
+ * recordarlas de memoria. Aparecen el día en que aplican, que es cuando sirven
+ * de algo; guardadas en un documento no se aplican nunca.
+ */
+export interface Props {
+  advice: Advice[];
+}
+
+const { advice } = Astro.props;
+
+const TONE: Record<string, string> = {
+  warning: 'border-orange/30 bg-orange/10',
+  info: 'border-border2 bg-surface2',
+};
+const ICON_TONE: Record<string, string> = {
+  warning: 'text-orange',
+  info: 'text-muted',
+};
+---
+
+{
+  advice.length > 0 && (
+    <div class="space-y-2">
+      {advice.map((item) => (
+        <div class:list={['flex gap-3 rounded-xl border p-4', TONE[item.severity]]} role="note">
+          <svg
+            class:list={['mt-0.5 h-5 w-5 shrink-0', ICON_TONE[item.severity]]}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
+          >
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <div class="min-w-0">
+            <p class:list={['text-sm font-semibold', ICON_TONE[item.severity]]}>{item.title}</p>
+            <p class="mt-1 text-sm leading-relaxed text-muted">{item.detail}</p>
+            <p class="mt-1 text-[11px] text-muted2">{item.source}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}

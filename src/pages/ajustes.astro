@@ -181,6 +181,22 @@ const label = "block text-xs text-muted uppercase tracking-wider mb-1.5";
         </div>
       </section>
 
+      <!-- Exportar: los datos son del usuario y debe poder llevárselos. -->
+      <section class="space-y-3 rounded-xl border border-border2 bg-surface p-6">
+        <h2 class="text-sm font-semibold text-primary">Tus datos</h2>
+        <p class="text-xs leading-relaxed text-muted">
+          Descarga todo lo registrado —perfil, entrenamientos, carreras, hidratación,
+          nutrición, notas y mediciones— en un único archivo JSON.
+        </p>
+        <a
+          href="/api/export"
+          download
+          class="inline-block rounded-lg bg-surface2 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-border2"
+        >
+          Exportar mis datos
+        </a>
+      </section>
+
       <p id="form-error" class="hidden text-sm text-orange" role="alert"></p>
 
       <button id="save-btn" type="submit"

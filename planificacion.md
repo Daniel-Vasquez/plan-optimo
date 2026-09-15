@@ -2,7 +2,7 @@
 
 > **Documento de arquitectura y hoja de ruta.** Fase 1: análisis y planificación. No se ha escrito ni modificado código de aplicación.
 > **Fuentes del análisis:** estructura real del repositorio (`src/`, `astro.config.mjs`, `package.json`, `tailwind.config.js`) y el plan de entrenamiento `rutina.md`.
-> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-7 ✅ completadas · siguiente: Tanda 8 (pulido y métricas corporales).
+> **Fecha:** 2026-09-14 · **Estado:** ✅ **Las 8 tandas completadas.** El roadmap queda cerrado.
 
 ---
 
@@ -747,7 +747,7 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 ---
 
-### Tanda 8 — Pulido, métricas corporales y despliegue
+### Tanda 8 — Pulido, métricas corporales y despliegue ✅ *completada*
 
 **Objetivo:** dejarlo listo para usarlo todos los días.
 
@@ -763,7 +763,16 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 **Archivos a crear:** `src/pages/api/body-metrics.ts`, `src/lib/db/repos/bodyMetrics.ts`, `src/components/body/WeightChart.astro`, `src/lib/autoregulation.ts`, `public/sw.js`
 **Archivos a modificar:** `README.md`, `public/manifest.json`, `src/pages/ajustes.astro`
 
-**Requiero de tu lado:** revisión final y confirmación del dominio de producción.
+**Notas de ejecución**
+- **Peso por tendencia, no por pesaje.** El peso diario oscila más de un kilo por agua, sal y glucógeno; leerlo crudo hace creer que se engorda cada 48 h. `/cuerpo` guarda cada pesaje y calcula la media móvil de 7 días al leer, que es lo que pide `rutina.md §4E`. La media exige dos pesajes como mínimo: con uno sería el dato crudo disfrazado de tendencia.
+- **Las reglas de §4D dejan de depender de la memoria.** `src/lib/autoregulation.ts` las evalúa contra los datos reales y las muestra el día que aplican: lunes tras una tirada de 13 km o más, domingo tras el voleibol, menos de 6 h de sueño, series lentas dos semanas seguidas y peso subiendo por encima de 0,4 kg/semana sin que baje la cintura. Esa última NO salta si la cintura está bajando: ganar músculo perdiendo cintura es el objetivo del plan, no un problema.
+- **Corregido un fallo de accesibilidad propio.** En la Tanda 0 migré 28 campos a `focus:outline-hidden`, que anula el indicador de foco; señalarlo sólo con un cambio de borde es una pista demasiado débil para quien navega con teclado. Se añade un anillo `:focus-visible` global.
+- **El service worker cachea únicamente estáticos.** Cachear páginas expondría los datos de una sesión a la siguiente persona en un dispositivo compartido, y cachear `/api` mostraría cifras viejas como si fueran de hoy. No hay modo sin conexión, y el README no lo promete.
+- `GET /api/export` descarga todo lo del usuario en un JSON, filtrando colección a colección por `userId`.
+- Índices revisados con `explain()`: las ocho consultas habituales usan índice, sin escaneos de colección y examinando exactamente los documentos que devuelven.
+- 19 pruebas nuevas (190 en total).
+
+**Requiero de tu lado:** revisión visual y confirmación de que el despliegue queda como esperas.
 
 ---
 
@@ -810,3 +819,23 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 ---
 
 **Tandas 0 y 1 completadas.** La siguiente es la **Tanda 2 (layout con header fijo + perfil de usuario)**, que no necesita nada de tu parte salvo, si quieres, confirmar los 7 destinos de navegación y su orden.
+
+
+---
+
+## Cierre
+
+Las ocho tandas están completadas. El proyecto pasó de una app de una sola
+persona con todo en `localStorage` a una aplicación multiusuario con
+renderizado en servidor, datos en MongoDB y el plan de `rutina.md`
+digitalizado como fuente única de verdad.
+
+**Lo que queda fuera del alcance acordado**, por si se retoma más adelante:
+
+- Importación desde reloj o Strava (el registro de carreras es manual).
+- Fotos de progreso cada 4 semanas, que `rutina.md §4E` menciona pero necesita
+  almacenamiento de archivos.
+- Registro de voleibol y caminata: hoy el calendario no los marca como fallados
+  porque no hay forma de registrarlos, así que quedan fuera del denominador de
+  adherencia.
+- Modo sin conexión real.

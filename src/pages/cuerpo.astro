@@ -1,0 +1,270 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Toast from "../components/Toast.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import { listBodyMetrics } from "../lib/db/repos/body";
+import { todayInTimezone } from "../lib/date";
+import {
+  GAIN_THRESHOLD_KG_PER_WEEK, waistChange, weeklyRateKg, weightChange, weightTrend,
+} from "../lib/body";
+
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+const today = todayInTimezone(profile?.timezone ?? "America/Mexico_City");
+
+const metrics = await listBodyMetrics(user.id);
+const chrono = [...metrics].reverse();
+const trend = weightTrend(chrono);
+const change = weightChange(trend);
+const waist = waistChange(chrono);
+const rate = weeklyRateKg(trend);
+
+const todayMetric = metrics.find((m) => m.date === today) ?? null;
+const latestWeight = trend.length ? trend[trend.length - 1]! : null;
+
+const payload = JSON.stringify({
+  points: trend,
+  startWeightKg: profile?.startWeightKg ?? null,
+});
+
+const field =
+  "w-full rounded-lg border border-border2 bg-surface2 px-3 py-2.5 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-blue/50 transition-colors";
+const label = "block text-xs uppercase tracking-wider text-muted mb-1.5";
+
+const dateFmt = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" });
+---
+
+<Layout title="Cuerpo" currentPage="">
+  <Toast />
+  <div class="mx-auto max-w-2xl space-y-4 px-4 py-6 lg:px-8 lg:py-8" data-body-payload={payload}>
+    <h1 class="font-display text-3xl text-primary">CUERPO</h1>
+
+    <p class="text-sm leading-relaxed text-muted">
+      El peso diario oscila más de un kilo por agua, sal y glucógeno. Lo que cuenta es la
+      <strong class="text-primary">tendencia</strong>: la media de los últimos 7 días.
+    </p>
+
+    <div class="grid grid-cols-3 gap-3">
+      {
+        [
+          {
+            label: "Tendencia",
+            value: latestWeight?.trendKg ? `${latestWeight.trendKg}` : "—",
+            unit: latestWeight?.trendKg ? "kg" : "",
+          },
+          {
+            label: "Cambio",
+            value: change === null ? "—" : `${change > 0 ? "+" : ""}${change}`,
+            unit: change === null ? "" : "kg",
+          },
+          {
+            label: "Cintura",
+            value: waist === null ? "—" : `${waist > 0 ? "+" : ""}${waist}`,
+            unit: waist === null ? "" : "cm",
+          },
+        ].map((stat) => (
+          <div class="rounded-xl border border-border2 bg-surface p-3 text-center">
+            <p class="text-[11px] uppercase tracking-wider text-muted">{stat.label}</p>
+            <p class="font-display text-2xl text-primary">{stat.value}</p>
+            <p class="text-[11px] text-muted2">{stat.unit}</p>
+          </div>
+        ))
+      }
+    </div>
+
+    {
+      rate !== null && rate > GAIN_THRESHOLD_KG_PER_WEEK && (waist === null || waist >= 0) && (
+        <div class="rounded-xl border border-orange/30 bg-orange/10 p-4">
+          <p class="text-sm font-semibold text-orange">El peso sube {rate} kg por semana</p>
+          <p class="mt-1 text-sm text-muted">
+            La cintura no baja y el ritmo supera los 0,4 kg semanales que marca rutina.md §4E.
+            Recorta unas 150 kcal diarias.
+          </p>
+        </div>
+      )
+    }
+
+    <form id="body-form" class="space-y-4 rounded-xl border border-border2 bg-surface p-5" novalidate>
+      <h2 class="text-sm font-semibold text-primary">Registrar</h2>
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class={label} for="date">Fecha</label>
+          <input id="date" name="date" type="date" class={field} value={todayMetric?.date ?? today} />
+        </div>
+        <div>
+          <label class={label} for="weightKg">Peso (kg)</label>
+          <input id="weightKg" name="weightKg" type="number" min="30" max="250" step="0.1"
+            class={field} value={todayMetric?.weightKg ?? ""} placeholder="66.3" />
+        </div>
+        <div>
+          <label class={label} for="waistCm">Cintura (cm)</label>
+          <input id="waistCm" name="waistCm" type="number" min="40" max="200" step="0.1"
+            class={field} value={todayMetric?.waistCm ?? ""} placeholder="84" />
+        </div>
+      </div>
+      <p class="text-[11px] text-muted2">
+        Pésate por la mañana, en ayunas y después de ir al baño. La cintura, los domingos.
+      </p>
+      <p id="form-error" class="hidden text-sm text-orange" role="alert"></p>
+      <button type="submit"
+        class="w-full rounded-lg bg-blue py-3 font-bold text-white transition-all hover:opacity-90 active:scale-95">
+        Guardar medición
+      </button>
+    </form>
+
+    <section class="rounded-xl border border-border2 bg-surface p-4 lg:p-6">
+      <h2 class="mb-4 text-sm font-semibold text-primary">Tendencia de peso</h2>
+      {
+        trend.length < 2 ? (
+          <p class="py-8 text-center text-sm text-muted">
+            Con dos pesajes o más aparecerá aquí la curva de tendencia.
+          </p>
+        ) : (
+          <div class="relative h-56"><canvas id="chart-weight"></canvas></div>
+        )
+      }
+    </section>
+
+    {
+      metrics.length > 0 && (
+        <section class="rounded-xl border border-border2 bg-surface p-4 lg:p-6">
+          <h2 class="mb-4 text-sm font-semibold text-primary">Historial</h2>
+          <div class="-mx-2 overflow-x-auto px-2">
+            <table class="w-full min-w-[320px] text-sm">
+              <thead>
+                <tr class="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
+                  <th class="pb-2 font-medium">Fecha</th>
+                  <th class="pb-2 text-right font-medium">Peso</th>
+                  <th class="pb-2 text-right font-medium">Cintura</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                {metrics.map((m) => (
+                  <tr>
+                    <td class="py-2.5 text-muted">{dateFmt.format(new Date(`${m.date}T00:00:00`))}</td>
+                    <td class="py-2.5 text-right tabular-nums text-primary">
+                      {m.weightKg !== null ? `${m.weightKg} kg` : "—"}
+                    </td>
+                    <td class="py-2.5 text-right tabular-nums text-muted">
+                      {m.waistCm !== null ? `${m.waistCm} cm` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )
+    }
+  </div>
+</Layout>
+
+<script>
+  import {
+    Chart, LineController, LineElement, PointElement, CategoryScale, LinearScale, Legend, Tooltip,
+  } from "chart.js";
+  import { axisStyle, legendStyle, tooltipStyle } from "../lib/charts";
+
+  Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Legend, Tooltip);
+
+  let instance: any;
+  const destroy = () => { instance?.destroy(); instance = undefined; };
+
+  function init() {
+    destroy();
+    const root = document.querySelector<HTMLElement>("[data-body-payload]");
+    const canvas = document.getElementById("chart-weight") as HTMLCanvasElement | null;
+    if (!root || !canvas) return;
+
+    const { points } = JSON.parse(root.dataset.bodyPayload!);
+    const labels = points.map((p: any) =>
+      new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" })
+        .format(new Date(`${p.date}T00:00:00`)),
+    );
+
+    instance = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            // El dato crudo va atenuado y sin línea: está para dar contexto,
+            // no para leerlo como si significara algo por sí solo.
+            label: "Pesaje",
+            data: points.map((p: any) => p.weightKg),
+            borderColor: "transparent",
+            backgroundColor: "rgb(var(--rgb-muted2))",
+            pointRadius: 3,
+            showLine: false,
+          },
+          {
+            label: "Tendencia (7 días)",
+            data: points.map((p: any) => p.trendKg),
+            borderColor: "#3b82f6",
+            backgroundColor: "#3b82f6",
+            borderWidth: 2,
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            spanGaps: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: axisStyle(),
+          y: { ...axisStyle(), ticks: { ...axisStyle().ticks, callback: (v: any) => `${v} kg` } },
+        },
+        plugins: {
+          legend: legendStyle(),
+          tooltip: {
+            ...tooltipStyle(),
+            callbacks: { label: (i: any) => ` ${i.dataset.label}: ${i.raw ?? "—"} kg` },
+          },
+        },
+      },
+    });
+  }
+
+  document.addEventListener("astro:page-load", init);
+  document.addEventListener("astro:before-swap", destroy);
+</script>
+
+<script>
+  function initForm() {
+    const form = document.getElementById("body-form") as HTMLFormElement | null;
+    if (!form) return;
+    const errorEl = document.getElementById("form-error")!;
+    const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement).value.trim();
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorEl.classList.add("hidden");
+
+      const response = await fetch("/api/body", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          date: value("date"),
+          weightKg: value("weightKg") === "" ? null : Number(value("weightKg")),
+          waistCm: value("waistCm") === "" ? null : Number(value("waistCm")),
+        }),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        errorEl.textContent = body.error ?? "No se pudo guardar.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      window.showToast?.("Medición guardada");
+      setTimeout(() => window.location.reload(), 600);
+    });
+  }
+
+  document.addEventListener("astro:page-load", initForm);
+</script>

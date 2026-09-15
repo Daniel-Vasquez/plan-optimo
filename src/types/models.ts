@@ -331,3 +331,17 @@ export interface AttendanceDay {
   water: { totalMl: number; goalMl: number; met: boolean } | null;
   nutrition: { proteinG: number; goalProteinG: number; met: boolean } | null;
 }
+
+/**
+ * Medición corporal (rutina.md §4E).
+ *
+ * El peso se registra por pesaje individual, no ya promediado: el promedio
+ * semanal se calcula al leer. Guardar sólo el promedio perdería el dato
+ * original y haría imposible recalcularlo si cambia el criterio.
+ */
+export interface BodyMetric extends BaseDoc {
+  date: DateStr;
+  weightKg: number | null;
+  waistCm: number | null;
+  note: string;
+}

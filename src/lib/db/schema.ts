@@ -30,6 +30,7 @@ export const COLLECTIONS = {
   nutritionLogs: 'nutrition_logs',
   foods: 'foods',
   notes: 'notes',
+  bodyMetrics: 'body_metrics',
 } as const;
 
 /**
@@ -109,6 +110,13 @@ export async function ensureIndexes(db: Db): Promise<string[]> {
       { title: 'text', content: 'text' },
       { name: 'note_text', default_language: 'spanish' },
     ),
+  );
+
+  // Una medición por día: el plan pide pesarse por la mañana, no a todas horas.
+  created.push(
+    await db
+      .collection(COLLECTIONS.bodyMetrics)
+      .createIndex({ userId: 1, date: -1 }, { unique: true, name: 'userId_date_unique' }),
   );
 
   return created;
