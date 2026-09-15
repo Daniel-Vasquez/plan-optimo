@@ -2,7 +2,7 @@
 
 Aplicación web de seguimiento de fitness, rendimiento físico y nutrición, construida sobre el plan de recomposición + 5K de 12 semanas descrito en [`rutina.md`](./rutina.md).
 
-> **Estado:** en migración. Hoy funciona offline con `localStorage`; se está transformando en una app multiusuario con MongoDB y autenticación. El plan completo está en [`planificacion.md`](./planificacion.md).
+> **Estado:** en migración (Tanda 1 de 8 completada). La app ya es multiusuario: renderiza en servidor, guarda en MongoDB y exige sesión. Los módulos de fitness siguen leyendo de `localStorage` hasta que cada tanda los migre. El plan completo está en [`planificacion.md`](./planificacion.md).
 
 ## Stack
 
@@ -11,11 +11,39 @@ Aplicación web de seguimiento de fitness, rendimiento físico y nutrición, con
 - **Alpine.js** — reactividad ligera
 - **Chart.js** — gráficas de progreso
 - **Google Fonts** — Bebas Neue + DM Sans
-- Persistencia actual: `localStorage` · destino: **MongoDB + Better Auth**
+- **MongoDB** (Atlas) — persistencia
+- **Better Auth** — sesión por email + contraseña
+- Renderizado en servidor con el adaptador de **Vercel**
 
 ## Requisitos
 
 - Node.js **>= 22.12** (lo exige Astro 7)
+- Un cluster de MongoDB Atlas y un `.env` (ver [`.env.example`](./.env.example))
+
+## Scripts
+
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo en http://localhost:4321 |
+| `npm run build` | Build de producción para Vercel |
+| `npm run check` | Typecheck con `astro check` |
+| `npm run db:indexes` | Crea los índices de Mongo (idempotente) |
+
+## Autenticación
+
+Email + contraseña, sin OAuth. Better Auth gestiona las colecciones `user`,
+`account`, `session` y `verification`; el perfil físico vive aparte en
+`profiles`.
+
+El aislamiento entre usuarios se apoya en cuatro capas (detalle en
+`planificacion.md` §1.5):
+
+1. `src/middleware.ts` resuelve la sesión y la deja en `Astro.locals`.
+2. Los repositorios de `src/lib/db/repos/` exigen `userId` como primer
+   argumento y lo inyectan ellos en el filtro.
+3. Los endpoints usan `requireUser(locals)`. **El `userId` nunca se lee del
+   body ni de la query string**, que es lo que evita el IDOR por parámetro.
+4. Los índices únicos llevan `userId` como prefijo.
 
 ## Instalación
 

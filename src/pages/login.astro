@@ -1,0 +1,113 @@
+---
+import AuthLayout from "../layouts/AuthLayout.astro";
+
+// El middleware ya redirige a / si hay sesión, así que aquí nunca llega
+// alguien autenticado. Sólo se recoge el destino al que volver.
+const redirectTo = Astro.url.searchParams.get("redirect") ?? "/";
+---
+
+<AuthLayout title="Entrar">
+  <form
+    id="login-form"
+    class="bg-surface border border-border2 rounded-2xl p-6 space-y-4"
+    data-redirect={redirectTo}
+    novalidate
+  >
+    <h1 class="text-lg font-semibold text-primary">Entrar</h1>
+
+    <div>
+      <label for="email" class="block text-xs text-muted uppercase tracking-wider mb-1.5">
+        Email
+      </label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        required
+        autocomplete="email"
+        class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-yellow transition-colors"
+        placeholder="tu@email.com"
+      />
+    </div>
+
+    <div>
+      <label for="password" class="block text-xs text-muted uppercase tracking-wider mb-1.5">
+        Contraseña
+      </label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        required
+        autocomplete="current-password"
+        class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-yellow transition-colors"
+        placeholder="••••••••"
+      />
+    </div>
+
+    <p id="form-error" class="text-orange text-sm hidden" role="alert"></p>
+
+    <button
+      id="submit-btn"
+      type="submit"
+      class="w-full bg-blue text-white font-bold py-3 rounded-lg hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+    >
+      Entrar
+    </button>
+
+    <p class="text-sm text-muted text-center pt-1">
+      ¿Aún no tienes cuenta?
+      <a href="/registro" class="text-blue hover:underline">Crear una</a>
+    </p>
+  </form>
+</AuthLayout>
+
+<script>
+  import { signIn } from "../lib/auth-client";
+
+  const form = document.getElementById("login-form") as HTMLFormElement;
+  const errorEl = document.getElementById("form-error")!;
+  const btn = document.getElementById("submit-btn") as HTMLButtonElement;
+
+  // El destino llega por data-attribute y no por define:vars: un <script> con
+  // atributos pasa a ser is:inline, y entonces el import de arriba no se
+  // empaqueta y el login deja de funcionar.
+  const redirectTo = form.dataset.redirect || "/";
+
+  function showError(message: string) {
+    errorEl.textContent = message;
+    errorEl.classList.remove("hidden");
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorEl.classList.add("hidden");
+
+    const email = (form.elements.namedItem("email") as HTMLInputElement).value.trim();
+    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+
+    if (!email || !password) {
+      showError("Escribe tu email y tu contraseña.");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Entrando...";
+
+    const { error } = await signIn.email({ email, password });
+
+    if (error) {
+      // Mensaje deliberadamente genérico: distinguir "no existe la cuenta" de
+      // "la contraseña no es correcta" le confirma a un atacante qué correos
+      // están registrados.
+      showError("Email o contraseña incorrectos.");
+      btn.disabled = false;
+      btn.textContent = "Entrar";
+      return;
+    }
+
+    // Recarga completa en vez de history.push: el middleware tiene que volver
+    // a resolver la sesión en el servidor para renderizar la página privada.
+    window.location.href = redirectTo;
+  });
+</script>

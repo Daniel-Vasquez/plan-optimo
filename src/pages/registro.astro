@@ -1,0 +1,172 @@
+---
+import AuthLayout from "../layouts/AuthLayout.astro";
+---
+
+<AuthLayout title="Crear cuenta">
+  <form
+    id="signup-form"
+    class="bg-surface border border-border2 rounded-2xl p-6 space-y-4"
+    novalidate
+  >
+    <h1 class="text-lg font-semibold text-primary">Crear cuenta</h1>
+
+    <div>
+      <label for="name" class="block text-xs text-muted uppercase tracking-wider mb-1.5">
+        Tu nombre
+      </label>
+      <input
+        id="name"
+        name="name"
+        type="text"
+        required
+        autocomplete="name"
+        class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-yellow transition-colors"
+        placeholder="Ej. Daniel"
+      />
+    </div>
+
+    <div>
+      <label for="email" class="block text-xs text-muted uppercase tracking-wider mb-1.5">
+        Email
+      </label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        required
+        autocomplete="email"
+        class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-yellow transition-colors"
+        placeholder="tu@email.com"
+      />
+    </div>
+
+    <div>
+      <label for="password" class="block text-xs text-muted uppercase tracking-wider mb-1.5">
+        Contraseña
+      </label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        required
+        minlength="8"
+        autocomplete="new-password"
+        class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary placeholder:text-muted2 focus:outline-hidden focus:border-yellow transition-colors"
+        placeholder="Mínimo 8 caracteres"
+      />
+      <p class="text-[11px] text-muted2 mt-1.5">Mínimo 8 caracteres.</p>
+    </div>
+
+    <div>
+      <label for="planStart" class="block text-xs text-muted uppercase tracking-wider mb-1.5">
+        Inicio del plan
+      </label>
+      <input
+        id="planStart"
+        name="planStart"
+        type="date"
+        required
+        class="w-full bg-surface2 border border-border2 rounded-lg px-4 py-3 text-primary focus:outline-hidden focus:border-yellow transition-colors"
+      />
+      <p class="text-[11px] text-muted2 mt-1.5">
+        Ancla para calcular en qué semana del plan estás. Se puede cambiar luego.
+      </p>
+    </div>
+
+    <p id="form-error" class="text-orange text-sm hidden" role="alert"></p>
+
+    <button
+      id="submit-btn"
+      type="submit"
+      class="w-full bg-blue text-white font-bold py-3 rounded-lg hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+    >
+      Crear cuenta
+    </button>
+
+    <p class="text-sm text-muted text-center pt-1">
+      ¿Ya tienes cuenta?
+      <a href="/login" class="text-blue hover:underline">Entrar</a>
+    </p>
+  </form>
+</AuthLayout>
+
+<script>
+  import { signUp } from "../lib/auth-client";
+
+  const form = document.getElementById("signup-form") as HTMLFormElement;
+  const errorEl = document.getElementById("form-error")!;
+  const btn = document.getElementById("submit-btn") as HTMLButtonElement;
+  const planStart = document.getElementById("planStart") as HTMLInputElement;
+
+  // Por defecto, el lunes de esta semana: el plan arranca en lunes con la
+  // sesión de Fuerza A. Se calcula en local, nunca con toISOString(), que
+  // convierte a UTC y corre el día.
+  (function setDefaultPlanStart() {
+    const d = new Date();
+    const dow = d.getDay();
+    d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    planStart.value = `${y}-${m}-${day}`;
+  })();
+
+  function showError(message: string) {
+    errorEl.textContent = message;
+    errorEl.classList.remove("hidden");
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorEl.classList.add("hidden");
+
+    const name = (form.elements.namedItem("name") as HTMLInputElement).value.trim();
+    const email = (form.elements.namedItem("email") as HTMLInputElement).value.trim();
+    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+    const start = planStart.value;
+
+    if (!name || !email || !password) {
+      showError("Rellena todos los campos.");
+      return;
+    }
+    if (password.length < 8) {
+      showError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) {
+      showError("Elige la fecha de inicio del plan.");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Creando cuenta...";
+
+    const { error } = await signUp.email({ name, email, password });
+
+    if (error) {
+      showError(
+        error.status === 422
+          ? "Ya existe una cuenta con ese email."
+          : (error.message ?? "No se pudo crear la cuenta."),
+      );
+      btn.disabled = false;
+      btn.textContent = "Crear cuenta";
+      return;
+    }
+
+    // `autoSignIn` deja la sesión abierta, así que ya se puede sembrar el
+    // perfil con la fecha de inicio elegida.
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      await fetch("/api/profile", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ planStartDate: start, timezone }),
+      });
+    } catch {
+      // Si falla, /ajustes permite completarlo; no vale la pena bloquear el alta.
+    }
+
+    window.location.href = "/";
+  });
+</script>

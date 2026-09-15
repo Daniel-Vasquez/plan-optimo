@@ -1,0 +1,19 @@
+---
+import AuthLayout from "../layouts/AuthLayout.astro";
+---
+
+<AuthLayout title="Cerrando sesión">
+  <div class="bg-surface border border-border2 rounded-2xl p-6 text-center">
+    <p class="text-muted text-sm">Cerrando sesión...</p>
+  </div>
+</AuthLayout>
+
+<script>
+  import { signOut } from "../lib/auth-client";
+
+  // Recarga completa para que el middleware vuelva a evaluar la sesión (ya
+  // inexistente) y deje al usuario en /login.
+  signOut().finally(() => {
+    window.location.href = "/login";
+  });
+</script>

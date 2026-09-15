@@ -2,7 +2,7 @@
 
 > **Documento de arquitectura y hoja de ruta.** Fase 1: análisis y planificación. No se ha escrito ni modificado código de aplicación.
 > **Fuentes del análisis:** estructura real del repositorio (`src/`, `astro.config.mjs`, `package.json`, `tailwind.config.js`) y el plan de entrenamiento `rutina.md`.
-> **Fecha:** 2026-09-14 · **Estado:** Tanda 0 ✅ completada · pendiente de `.env` para iniciar Tanda 1.
+> **Fecha:** 2026-09-14 · **Estado:** Tandas 0 y 1 ✅ completadas · siguiente: Tanda 2 (layout y perfil).
 
 ---
 
@@ -540,7 +540,7 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 ---
 
-### Tanda 1 — Infraestructura: SSR, MongoDB y Better Auth
+### Tanda 1 — Infraestructura: SSR, MongoDB y Better Auth ✅ *completada*
 
 **Objetivo:** el usuario puede registrarse, iniciar sesión y ver una página privada vacía. Cero funcionalidad de fitness aún.
 
@@ -556,7 +556,19 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 **Archivos a crear:** `src/lib/db/client.ts`, `src/lib/db/collections.ts`, `src/lib/db/indexes.ts`, `src/lib/auth.ts`, `src/lib/auth-client.ts`, `src/lib/api.ts`, `src/middleware.ts`, `src/pages/api/auth/[...all].ts`, `src/pages/login.astro`, `src/pages/registro.astro`, `src/types/models.ts`, `.env.example`
 **Archivos a modificar:** `astro.config.mjs`, `package.json`, `src/env.d.ts`
 
-**Requiero de tu lado:**
+**Verificación (extremo a extremo, contra el Atlas real)**
+- Alta, sesión de 30 días, ruta privada, logout y sesión invalidada ✓
+- Ruta privada sin sesión → 302 a `/login?redirect=…` conservando el destino ✓
+- API sin sesión → 401 JSON (no una redirección a HTML) ✓
+- Contraseña incorrecta → 401, con mensaje genérico en la interfaz ✓
+- **IDOR:** el usuario A manda el `userId` de B en el cuerpo → se ignora y opera sobre A; el perfil de B queda intacto ✓
+- Dos usuarios simultáneos ven perfiles distintos y aislados ✓
+- `ensureProfile` es idempotente: dos altas seguidas no duplican documento ✓
+- Los usuarios de prueba se borraron al terminar; la base queda vacía.
+
+> **Node en Vercel resuelto.** El adaptador avisa en cada build de la versión que va a usar y fija **Node 24** por su cuenta (>= 22.12), así que la preocupación de la Tanda 0 queda cubierta sin tocar nada.
+
+**Requisitos que quedaron cubiertos:**
 1. **Cluster de MongoDB Atlas** (el tier M0 gratuito basta) con un usuario de base de datos y `0.0.0.0/0` en la lista de acceso de red (Vercel usa IPs dinámicas).
 2. Un archivo `.env` en la raíz con:
    ```
@@ -711,9 +723,9 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 |---|---|---|
 | 1 | ~~Antes de Tanda 0~~ | ✅ Resuelto: Tailwind v4 con `@tailwindcss/vite` |
 | 2 | **Antes de Tanda 1** | Cluster MongoDB Atlas + usuario de BD + acceso de red `0.0.0.0/0` |
-| 3 | **Antes de Tanda 1** | `.env` local — plantilla lista en `.env.example`: `cp .env.example .env` y rellenar |
+| 3 | ~~Antes de Tanda 1~~ | ✅ Hecho: `.env` local relleno y verificado |
 | 4 | **Antes de Tanda 1** | Las mismas variables en Vercel (Production + Preview) |
-| 4b | **Antes de Tanda 1** | Comprobar que Vercel usa **Node >= 22.12** (lo exige Astro 7) |
+| 4b | ~~Antes de Tanda 1~~ | ✅ Resuelto: el adaptador fija Node 24 automáticamente |
 | 5 | ~~Antes de Tanda 1~~ | ✅ Confirmado: GitHub + Vercel |
 | 6 | **Antes de Tanda 5** | Validar la transcripción de `rutina.md` a `src/data/plan.ts` (te la presento en tabla) |
 | 7 | **Antes de Tanda 5** | Fecha real de inicio del plan y unidad de peso preferida (lb / kg) |
@@ -747,4 +759,4 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 ---
 
-**Tanda 0 completada.** Para arrancar la **Tanda 1 (SSR + MongoDB + Better Auth)** necesito el cluster de Atlas y el `.env` relleno a partir de `.env.example` (puntos 2, 3, 4 y 4b de §4).
+**Tandas 0 y 1 completadas.** La siguiente es la **Tanda 2 (layout con header fijo + perfil de usuario)**, que no necesita nada de tu parte salvo, si quieres, confirmar los 7 destinos de navegación y su orden.
