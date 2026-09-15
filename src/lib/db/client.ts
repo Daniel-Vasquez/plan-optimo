@@ -2,45 +2,113 @@ import { MongoClient, type Db } from 'mongodb';
 import { serverEnv } from '../env';
 
 /**
- * Cliente de MongoDB compartido por todo el proceso.
+ * Cliente de MongoDB para entorno serverless.
  *
- * Se cachea en `globalThis` por dos motivos:
+ * Se cachea en `globalThis` porque un mismo contenedor de Vercel atiende
+ * varias peticiones, y en desarrollo el hot-reload reevalúa los módulos: sin
+ * caché se abriría un pool nuevo cada vez hasta agotar el límite de Atlas.
  *
- * 1. En desarrollo, el hot-reload de Vite reevalúa los módulos en cada cambio.
- *    Sin caché, cada recarga abriría un pool de conexiones nuevo y acabaría
- *    agotando el límite de conexiones de Atlas.
- * 2. En producción sobre funciones serverless, un mismo contenedor atiende
- *    varias peticiones. Reutilizar el cliente evita pagar el handshake de
- *    conexión en cada invocación.
+ * Pero cachear a secas tiene una trampa que costó un despliegue entero:
+ * cuando una operación falla de forma dura —Atlas rechazando la IP, por
+ * ejemplo— el driver CIERRA la topología. El objeto cliente sigue en caché,
+ * así que todas las peticiones siguientes de ese contenedor fallan con
+ * `MongoTopologyClosedError: Topology is closed`, que además oculta el error
+ * original. El contenedor queda envenenado hasta que Vercel lo recicla.
  *
- * `new MongoClient()` no conecta: el driver abre la conexión de forma perezosa
- * en la primera operación. Por eso los getters pueden ser síncronos, que es lo
- * que necesita `mongodbAdapter()` al construir la instancia de Better Auth.
+ * Por eso aquí se comprueba el estado antes de reutilizar y se reconstruye el
+ * cliente si quedó inservible. Y por eso `getDb()`/`getMongoClient()` devuelven
+ * proxies: Better Auth recibe la referencia UNA vez, al construirse, así que si
+ * se limitaran a devolver el objeto del momento seguiría usando el cliente
+ * muerto para siempre. El proxy resuelve al cliente vivo en cada acceso.
  */
 
-const CLIENT_KEY = Symbol.for('trackfit.mongo.client');
+const STATE_KEY = Symbol.for('trackfit.mongo.state');
 
-type GlobalWithMongo = typeof globalThis & {
-  [CLIENT_KEY]?: MongoClient;
-};
-
+type GlobalWithMongo = typeof globalThis & { [STATE_KEY]?: MongoClient };
 const globalWithMongo = globalThis as GlobalWithMongo;
 
-export function getMongoClient(): MongoClient {
-  let client = globalWithMongo[CLIENT_KEY];
-  if (!client) {
-    client = new MongoClient(serverEnv.mongoUri, {
-      // En serverless conviene un pool pequeño: muchas instancias con pocas
-      // conexiones cada una, en vez de pocas acaparando el límite de Atlas.
-      maxPoolSize: 10,
-      minPoolSize: 0,
-      serverSelectionTimeoutMS: 10_000,
-    });
-    globalWithMongo[CLIENT_KEY] = client;
+function createClient(): MongoClient {
+  return new MongoClient(serverEnv.mongoUri, {
+    // Pool pequeño: en serverless hay muchas instancias, y entre todas no
+    // deben agotar el límite de conexiones de Atlas.
+    maxPoolSize: 10,
+    minPoolSize: 0,
+    // Vercel congela el contenedor entre invocaciones. Un socket que lleva
+    // mucho ocioso está muerto del otro lado aunque aquí parezca vivo;
+    // descartarlo pronto evita reutilizarlo.
+    maxIdleTimeMS: 60_000,
+    serverSelectionTimeoutMS: 10_000,
+  });
+}
+
+/**
+ * ¿El cliente quedó inservible?
+ *
+ * El driver no expone esto en su API pública, así que hay que mirar dentro, y
+ * hay dos estados distintos que comprobar:
+ *
+ * - `s.hasBeenClosed`: alguien llamó a `close()`. El propio driver documenta
+ *   que no hay forma de revertirlo, así que el cliente es basura para siempre.
+ *   Reutilizarlo da `MongoNotConnectedError`.
+ * - topología cerrada o destruida: un fallo duro la tumbó. Reutilizarlo da
+ *   `MongoTopologyClosedError`.
+ *
+ * Si aún no hay topología es que no ha conectado, y eso es normal:
+ * `new MongoClient()` no conecta, el driver lo hace en la primera operación.
+ */
+function isUnusable(client: MongoClient): boolean {
+  const internals = client as unknown as {
+    s?: { hasBeenClosed?: boolean };
+    topology?: { isDestroyed?: () => boolean; isClosed?: () => boolean };
+  };
+
+  if (internals.s?.hasBeenClosed) return true;
+
+  const topology = internals.topology;
+  if (!topology) return false;
+  return Boolean(topology.isClosed?.() || topology.isDestroyed?.());
+}
+
+/** Cliente vivo, reconstruido si el anterior murió. */
+function liveClient(): MongoClient {
+  const cached = globalWithMongo[STATE_KEY];
+  if (cached && !isUnusable(cached)) return cached;
+
+  if (cached) {
+    console.warn('[mongo] la topología estaba cerrada; se reconstruye el cliente');
   }
+  const client = createClient();
+  globalWithMongo[STATE_KEY] = client;
   return client;
 }
 
+/** Envuelve un objeto para que cada acceso se resuelva contra la instancia viva. */
+function liveProxy<T extends object>(resolve: () => T): T {
+  return new Proxy({} as T, {
+    get(_target, prop, receiver) {
+      const current = resolve();
+      const value = Reflect.get(current as object, prop, receiver);
+      return typeof value === 'function' ? value.bind(current) : value;
+    },
+    has(_target, prop) {
+      return Reflect.has(resolve() as object, prop);
+    },
+    getPrototypeOf() {
+      return Reflect.getPrototypeOf(resolve() as object);
+    },
+  });
+}
+
+/**
+ * Cliente de Mongo. Es un proxy: quien lo guarde (Better Auth lo hace) seguirá
+ * apuntando al cliente vivo aunque haya habido que reconstruirlo.
+ */
+export const mongoClient: MongoClient = liveProxy(liveClient);
+
+export function getMongoClient(): MongoClient {
+  return mongoClient;
+}
+
 export function getDb(): Db {
-  return getMongoClient().db(serverEnv.mongoDb);
+  return liveProxy(() => liveClient().db(serverEnv.mongoDb));
 }

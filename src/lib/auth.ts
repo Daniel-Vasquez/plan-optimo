@@ -56,6 +56,17 @@ function createAuth() {
       cookiePrefix: 'trackfit',
     },
 
+    onAPIError: {
+      // Better Auth convierte sus errores internos en un 500 sin contar por
+      // qué. Sin esto, un fallo de conexión a Mongo y una contraseña mal
+      // escrita se ven exactamente igual desde fuera. Lo que se registra aquí
+      // aparece en Vercel → Logs (Runtime).
+      onError: (error) => {
+        const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+        console.error('[better-auth]', detail);
+      },
+    },
+
     // Orígenes autorizados a iniciar el flujo de autenticación. Se añaden los
     // dominios que genera Vercel para que los despliegues de preview, que
     // tienen una URL distinta en cada commit, no queden fuera.

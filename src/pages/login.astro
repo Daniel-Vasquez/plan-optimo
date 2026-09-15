@@ -64,6 +64,7 @@ const redirectTo = Astro.url.searchParams.get("redirect") ?? "/";
 
 <script>
   import { signIn } from "../lib/auth-client";
+  import { authErrorMessage } from "../lib/auth-errors";
 
   const form = document.getElementById("login-form") as HTMLFormElement;
   const errorEl = document.getElementById("form-error")!;
@@ -97,10 +98,9 @@ const redirectTo = Astro.url.searchParams.get("redirect") ?? "/";
     const { error } = await signIn.email({ email, password });
 
     if (error) {
-      // Mensaje deliberadamente genérico: distinguir "no existe la cuenta" de
-      // "la contraseña no es correcta" le confirma a un atacante qué correos
-      // están registrados.
-      showError("Email o contraseña incorrectos.");
+      // No todo fallo es de credenciales: un 500 aquí es el servidor, no tu
+      // contraseña. Confundirlos hace perder horas depurando lo que no es.
+      showError(authErrorMessage(error));
       btn.disabled = false;
       btn.textContent = "Entrar";
       return;

@@ -92,6 +92,7 @@ import AuthLayout from "../layouts/AuthLayout.astro";
 
 <script>
   import { signUp } from "../lib/auth-client";
+  import { authErrorMessage } from "../lib/auth-errors";
 
   const form = document.getElementById("signup-form") as HTMLFormElement;
   const errorEl = document.getElementById("form-error")!;
@@ -144,11 +145,7 @@ import AuthLayout from "../layouts/AuthLayout.astro";
     const { error } = await signUp.email({ name, email, password });
 
     if (error) {
-      showError(
-        error.status === 422
-          ? "Ya existe una cuenta con ese email."
-          : (error.message ?? "No se pudo crear la cuenta."),
-      );
+      showError(authErrorMessage(error));
       btn.disabled = false;
       btn.textContent = "Crear cuenta";
       return;

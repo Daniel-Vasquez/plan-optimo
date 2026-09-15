@@ -14,8 +14,11 @@ import { auth } from './lib/auth';
 /** Rutas accesibles sin sesión. Lista blanca explícita: lo no listado es privado. */
 const PUBLIC_PATHS = new Set(['/login', '/registro']);
 
-/** Prefijos públicos (el propio Better Auth necesita atender sin sesión). */
-const PUBLIC_PREFIXES = ['/api/auth/'];
+/**
+ * Prefijos públicos. Better Auth necesita atender sin sesión, y /api/health
+ * tiene que responder precisamente cuando la autenticación no funciona.
+ */
+const PUBLIC_PREFIXES = ['/api/auth/', '/api/health'];
 
 function isPublic(pathname: string): boolean {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
