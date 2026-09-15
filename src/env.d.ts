@@ -10,4 +10,6 @@ declare namespace App {
 
 interface Window {
   showToast?: (message: string, type?: string) => void;
+  /** Marca de que el listener de scroll de la barra inferior ya está puesto. */
+  __trackfitBottomNav?: boolean;
 }

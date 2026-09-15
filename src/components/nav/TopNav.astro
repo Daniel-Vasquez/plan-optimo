@@ -2,18 +2,18 @@
 import NavLink from './NavLink.astro';
 import UserMenu from './UserMenu.astro';
 import Icon from './Icon.astro';
-import type { IconName } from './Icon.astro';
+import { NAV_DESTINATIONS } from './destinations';
 
 /**
  * Barra de navegación fija superior.
  *
- * Sustituye a la barra lateral de escritorio y a la barra inferior de móvil,
- * que eran dos estructuras distintas manteniendo la misma lista de destinos
- * duplicada. Ahora hay una sola.
+ * Queda fija arriba y visible SIEMPRE, sin reaccionar al desplazamiento: es
+ * donde viven la identidad, la semana del plan, el agua y la cuenta, y son
+ * datos que deben poder consultarse en cualquier momento.
  *
- * Con siete destinos, en móvil los iconos no caben siempre: la tira de
- * navegación desplaza en horizontal en vez de esconder destinos en un menú
- * "más", donde nadie los encuentra.
+ * En móvil no muestra los destinos: ahí los sirve `BottomNav`, al alcance del
+ * pulgar. La lista sale de `destinations.ts` para que ambas barras no puedan
+ * desincronizarse.
  */
 export interface Props {
   currentPage?: string;
@@ -32,15 +32,6 @@ const {
   waterPct = null,
 } = Astro.props;
 
-const DESTINATIONS: { id: string; href: string; label: string; icon: IconName }[] = [
-  { id: 'inicio', href: '/', label: 'Inicio', icon: 'inicio' },
-  { id: 'fuerza', href: '/fuerza', label: 'Fuerza', icon: 'fuerza' },
-  { id: 'running', href: '/progreso-running', label: 'Running', icon: 'running' },
-  { id: 'nutricion', href: '/nutricion', label: 'Nutrición', icon: 'nutricion' },
-  { id: 'agua', href: '/hidratacion', label: 'Agua', icon: 'agua' },
-  { id: 'calendario', href: '/calendario', label: 'Calendario', icon: 'calendario' },
-  { id: 'notas', href: '/notas', label: 'Notas', icon: 'notas' },
-];
 ---
 
 <header
@@ -57,14 +48,17 @@ const DESTINATIONS: { id: string; href: string; label: string; icon: IconName }[
 
     <nav
       aria-label="Navegación principal"
-      class="scrollbar-hide flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:justify-center lg:gap-1"
+      class="scrollbar-hide hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto md:flex lg:justify-center lg:gap-1"
     >
       {
-        DESTINATIONS.map((d) => (
+        NAV_DESTINATIONS.map((d) => (
           <NavLink href={d.href} label={d.label} icon={d.icon} current={currentPage === d.id} />
         ))
       }
     </nav>
+
+    {/* En móvil no hay tira de destinos: este hueco empuja los controles a la derecha. */}
+    <div class="flex-1 md:hidden"></div>
 
     <div class="flex shrink-0 items-center gap-1">
       {weekBadge && (

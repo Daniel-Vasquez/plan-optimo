@@ -1,0 +1,134 @@
+---
+import Icon, { type IconName } from './Icon.astro';
+import { NAV_DESTINATIONS } from './destinations';
+
+/**
+ * Barra de navegación inferior, sólo en móvil.
+ *
+ * Comparte la lista de destinos con la barra superior a través de
+ * `destinations.ts`: tener dos listas que mantener sincronizadas a mano fue
+ * exactamente el problema del layout anterior.
+ *
+ * Los destinos aparecen sólo con icono. Con siete, una etiqueta legible no
+ * cabe en 360 px de ancho, así que cada enlace lleva `aria-label` y el
+ * destino activo se marca con color y con una barra superior.
+ *
+ * El `padding-bottom` con `env(safe-area-inset-bottom)` es necesario porque la
+ * app se instala como PWA con `viewport-fit=cover`: sin eso, el indicador de
+ * inicio del iPhone se come la fila de iconos.
+ */
+export interface Props {
+  currentPage?: string;
+}
+
+const { currentPage = '' } = Astro.props;
+---
+
+<nav
+  id="bottom-nav"
+  aria-label="Navegación principal"
+  class="fixed right-0 bottom-0 left-0 z-40 border-t border-border bg-surface transition-transform duration-300 ease-in-out md:hidden"
+  style="padding-bottom: env(safe-area-inset-bottom, 0px);"
+>
+  <ul class="flex items-stretch justify-around">
+    {
+      NAV_DESTINATIONS.map((destination) => {
+        const current = currentPage === destination.id;
+        return (
+          <li class="flex-1">
+            <a
+              href={destination.href}
+              aria-label={destination.label}
+              aria-current={current ? 'page' : undefined}
+              class:list={[
+                'relative flex h-14 flex-col items-center justify-center gap-0.5 transition-colors',
+                current ? 'text-yellow' : 'text-muted active:text-primary',
+              ]}
+            >
+              {current && (
+                <span
+                  class="absolute inset-x-2 top-0 h-0.5 rounded-full bg-yellow"
+                  aria-hidden="true"
+                />
+              )}
+              <Icon name={destination.icon as IconName} class="w-5 h-5" />
+            </a>
+          </li>
+        );
+      })
+    }
+  </ul>
+</nav>
+
+<style>
+  /* Quien haya pedido menos movimiento no debería ver la barra deslizarse. */
+  @media (prefers-reduced-motion: reduce) {
+    #bottom-nav {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import { nextBottomNavState } from '../../lib/scroll-nav';
+
+  /**
+   * Oculta la barra inferior al bajar y la devuelve al subir.
+   *
+   * La decisión vive en `src/lib/scroll-nav.ts`, que se prueba sin navegador.
+   * Aquí sólo queda leer el scroll y aplicar la clase.
+   *
+   * Dos detalles que importan:
+   *
+   * - El listener se registra UNA vez y el elemento se relee en cada
+   *   comprobación. Con View Transitions el DOM se reemplaza en cada
+   *   navegación: guardar la referencia dejaría el listener actuando sobre un
+   *   nodo que ya no está en el documento.
+   * - El trabajo va dentro de `requestAnimationFrame` y el listener es
+   *   `passive`, para no bloquear el hilo de desplazamiento.
+   */
+  let state = { hidden: false, lastY: 0 };
+  let ticking = false;
+
+  function apply() {
+    const nav = document.getElementById('bottom-nav');
+    if (!nav) return;
+    nav.classList.toggle('translate-y-full', state.hidden);
+    // Fuera de pantalla no debe ser alcanzable con el tabulador.
+    nav.inert = state.hidden;
+  }
+
+  function update() {
+    ticking = false;
+    const previous = state.hidden;
+
+    state = nextBottomNavState({
+      y: Math.max(0, window.scrollY),
+      lastY: state.lastY,
+      hidden: state.hidden,
+      scrollable: document.documentElement.scrollHeight - window.innerHeight,
+    });
+
+    if (state.hidden !== previous) apply();
+  }
+
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }
+
+  function start() {
+    // Cada navegación arranca con la barra visible y el contador a cero.
+    state = { hidden: false, lastY: Math.max(0, window.scrollY) };
+    apply();
+  }
+
+  // El guardia evita duplicar el listener si el módulo se reevalúa.
+  if (!window.__trackfitBottomNav) {
+    window.__trackfitBottomNav = true;
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    document.addEventListener('astro:page-load', start);
+  }
+</script>

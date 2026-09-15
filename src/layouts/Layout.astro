@@ -2,6 +2,7 @@
 import { ClientRouter } from "astro:transitions";
 import "../styles/global.css";
 import TopNav from "../components/nav/TopNav.astro";
+import BottomNav from "../components/nav/BottomNav.astro";
 import { getProfile } from "../lib/db/repos/profiles";
 import { getWaterDay } from "../lib/db/repos/water";
 import { planWeekFor, todayInTimezone } from "../lib/date";
@@ -109,11 +110,14 @@ const waterPercent = profile
       waterPct={waterPercent}
     />
 
-    {/* El padding compensa la altura de la barra fija. */}
-    <main class="pt-14 lg:pt-16">
+    {/* Arriba se compensa la barra fija; abajo, la de móvil, para que no
+        tape el final del contenido ni los botones de acción. */}
+    <main class="pt-14 pb-20 md:pb-0 lg:pt-16">
       <div class="mx-auto max-w-7xl">
         <slot />
       </div>
     </main>
+
+    <BottomNav currentPage={currentPage} />
   </body>
 </html>
