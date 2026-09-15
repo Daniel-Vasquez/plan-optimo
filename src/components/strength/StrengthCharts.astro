@@ -1,0 +1,180 @@
+---
+/**
+ * Gráficas de fuerza.
+ *
+ * Mismo enfoque que las de running: los datos llegan ya agregados del servidor
+ * y aquí sólo se pintan. La paleta es la validada del proyecto.
+ */
+export interface Props {
+  payload: string;
+  hasData: boolean;
+}
+const { payload, hasData } = Astro.props;
+const card = 'rounded-xl border border-border2 bg-surface p-4 lg:p-6';
+---
+
+<div id="strength-charts" data-payload={payload} class="space-y-5">
+  {
+    !hasData ? (
+      <div class={`${card} text-center`}>
+        <p class="py-10 text-sm text-muted">
+          Todavía no hay sesiones registradas. Cuando completes la primera, aquí verás el
+          volumen por sesión, el cumplimiento frente a lo asignado y el reparto por grupo muscular.
+        </p>
+      </div>
+    ) : (
+      <>
+        <section class={card}>
+          <h2 class="text-sm font-semibold text-primary">Volumen por sesión</h2>
+          <p class="mt-0.5 mb-4 text-xs text-muted">
+            Kilos totales movidos. Las semanas de descarga bajan a propósito.
+          </p>
+          <div class="relative h-64"><canvas id="chart-volume"></canvas></div>
+        </section>
+
+        <section class={card}>
+          <h2 class="text-sm font-semibold text-primary">Realizado frente a asignado</h2>
+          <p class="mt-0.5 mb-4 text-xs text-muted">
+            Porcentaje de repeticiones completadas sobre las prescritas. La línea marca el 100%.
+          </p>
+          <div class="relative h-56"><canvas id="chart-completion"></canvas></div>
+        </section>
+
+        <section class={card}>
+          <h2 class="text-sm font-semibold text-primary">Volumen por grupo muscular</h2>
+          <p class="mt-0.5 mb-4 text-xs text-muted">
+            El volumen de cada ejercicio se reparte entre los grupos que trabaja.
+          </p>
+          <div class="relative h-64"><canvas id="chart-muscle"></canvas></div>
+        </section>
+      </>
+    )
+  }
+</div>
+
+<script>
+  import {
+    Chart, BarController, BarElement, LineController, LineElement, PointElement,
+    CategoryScale, LinearScale, Legend, Tooltip,
+  } from 'chart.js';
+  import { axisStyle, referenceLinePlugin, themeColor, tooltipStyle } from '../../lib/charts';
+
+  Chart.register(
+    BarController, BarElement, LineController, LineElement, PointElement,
+    CategoryScale, LinearScale, Legend, Tooltip,
+  );
+
+  const instances: any[] = [];
+  const destroyAll = () => { while (instances.length) instances.pop()?.destroy(); };
+
+  const shortDate = (date: string) =>
+    new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short' })
+      .format(new Date(`${date}T00:00:00`));
+
+  function init() {
+    destroyAll();
+    const root = document.getElementById('strength-charts');
+    if (!root?.dataset.payload) return;
+    const data = JSON.parse(root.dataset.payload);
+
+    const volume = document.getElementById('chart-volume') as HTMLCanvasElement | null;
+    if (volume && data.sessions?.length) {
+      instances.push(new Chart(volume, {
+        type: 'bar',
+        data: {
+          labels: data.sessions.map((s: any) => shortDate(s.date)),
+          datasets: [{
+            label: 'Volumen',
+            data: data.sessions.map((s: any) => s.volumeKg),
+            // Las descargas se pintan atenuadas: bajar ahí es lo correcto, y
+            // verlas igual que el resto las haría parecer un mal día.
+            backgroundColor: data.sessions.map((s: any) => (s.isDeload ? data.deloadColor : data.primaryColor)),
+            borderRadius: 4,
+            borderSkipped: false,
+            barPercentage: 0.9,
+            categoryPercentage: 0.88,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: axisStyle(), y: { beginAtZero: true, ...axisStyle() } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              ...tooltipStyle(),
+              callbacks: {
+                label: (item: any) => {
+                  const s = data.sessions[item.dataIndex];
+                  return [` ${s.volumeKg} kg`, ` Fuerza ${s.templateId}${s.isDeload ? ' · descarga' : ''}`];
+                },
+              },
+            },
+          },
+        },
+      }));
+    }
+
+    const completion = document.getElementById('chart-completion') as HTMLCanvasElement | null;
+    if (completion && data.sessions?.length) {
+      instances.push(new Chart(completion, {
+        type: 'line',
+        data: {
+          labels: data.sessions.map((s: any) => shortDate(s.date)),
+          datasets: [{
+            label: 'Cumplimiento',
+            data: data.sessions.map((s: any) => s.completionPct),
+            borderColor: data.primaryColor,
+            backgroundColor: data.primaryColor,
+            borderWidth: 2, tension: 0.3,
+            pointRadius: 4, pointHoverRadius: 8,
+            pointBorderColor: themeColor('surface'), pointBorderWidth: 2,
+          }],
+        },
+        plugins: [referenceLinePlugin(100, '100%')],
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: axisStyle(),
+            y: {
+              beginAtZero: true, ...axisStyle(),
+              ticks: { ...axisStyle().ticks, callback: (v: any) => `${v}%` },
+            },
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: { ...tooltipStyle(), callbacks: { label: (i: any) => ` ${i.raw}%` } },
+          },
+        },
+      }));
+    }
+
+    const muscle = document.getElementById('chart-muscle') as HTMLCanvasElement | null;
+    if (muscle && data.muscles?.length) {
+      instances.push(new Chart(muscle, {
+        type: 'bar',
+        data: {
+          labels: data.muscles.map((m: any) => m.muscle),
+          datasets: [{
+            label: 'Volumen',
+            data: data.muscles.map((m: any) => m.volumeKg),
+            backgroundColor: data.primaryColor,
+            borderRadius: 4, borderSkipped: false,
+            barPercentage: 0.85, categoryPercentage: 0.85,
+          }],
+        },
+        options: {
+          indexAxis: 'y' as const,
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { beginAtZero: true, ...axisStyle() }, y: axisStyle() },
+          plugins: {
+            legend: { display: false },
+            tooltip: { ...tooltipStyle(), callbacks: { label: (i: any) => ` ${i.raw} kg` } },
+          },
+        },
+      }));
+    }
+  }
+
+  document.addEventListener('astro:page-load', init);
+  document.addEventListener('astro:before-swap', destroyAll);
+</script>

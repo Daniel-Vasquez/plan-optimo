@@ -1,20 +1,387 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import ComingSoon from "../components/ComingSoon.astro";
+import Toast from "../components/Toast.astro";
+import ExerciseCard from "../components/strength/ExerciseCard.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import { buildSessionFromTemplate, getStrengthSession } from "../lib/db/repos/strength";
+import { planWeekFor, todayInTimezone } from "../lib/date";
+import { blockLabel, blockWeekFor, dayPlanFor, isDeloadWeek, templateForDate } from "../lib/strength";
+import { STRENGTH_TEMPLATES, WARMUP } from "../data/plan";
+
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+const timezone = profile?.timezone ?? "America/Mexico_City";
+
+// Se puede abrir otro día con ?date=, para registrar una sesión a posteriori.
+const param = Astro.url.searchParams.get("date");
+const date = param && /^\d{4}-\d{2}-\d{2}$/.test(param)
+  ? param
+  : todayInTimezone(timezone);
+
+const planWeek = profile ? planWeekFor(profile.planStartDate, date, profile.planWeeks) : 1;
+const deload = isDeloadWeek(planWeek);
+const template = templateForDate(date);
+const dayPlan = dayPlanFor(date);
+
+const stored = template ? await getStrengthSession(user.id, date) : null;
+const session = stored ?? (template
+  ? buildSessionFromTemplate(date, planWeek, blockWeekFor(planWeek), deload)
+  : null);
+
+const unit = profile?.displayUnit ?? "lb";
+const cueBySlug = Object.fromEntries(
+  STRENGTH_TEMPLATES.flatMap((t) => t.exercises.map((e) => [e.slug, e.cue])),
+);
+
+const dateLabel = new Intl.DateTimeFormat("es-MX", {
+  weekday: "long", day: "numeric", month: "long",
+}).format(new Date(`${date}T00:00:00`));
 ---
 
 <Layout title="Fuerza" currentPage="fuerza">
-  <ComingSoon
-    title="Fuerza"
-    icon="fuerza"
-    tanda={5}
-    description="Ejecución y registro de las sesiones A, B y C de rutina.md, con las series realizadas frente a las asignadas."
-    features={[
-      "Series y repeticiones reales contra las prescritas, ejercicio por ejercicio",
-      "Temporizador de descanso con la duración de cada ejercicio",
-      "Escalera de densificación de 10 peldaños cuando se acaba el peso",
-      "Detección de semana de descarga dentro del bloque de 4 semanas",
-      "Gráficas de volumen, e1RM estimado y cumplimiento por sesión",
-    ]}
-  />
+  <Toast />
+  <div
+    class="mx-auto max-w-2xl space-y-5 px-4 py-6 lg:px-8 lg:py-8"
+    id="strength-root"
+    data-date={date}
+    data-unit={unit}
+    data-has-session={session ? "1" : "0"}
+  >
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p class="text-xs capitalize text-muted">{dateLabel}</p>
+        <h1 class="font-display text-3xl text-primary">
+          {template ? `FUERZA ${template.templateId}` : "SIN FUERZA HOY"}
+        </h1>
+        <p class="mt-0.5 text-sm text-muted">{template ? template.label : dayPlan.label}</p>
+      </div>
+      <div class="flex flex-col items-end gap-1">
+        <span class="rounded-full bg-surface2 px-2.5 py-1 text-xs text-muted">
+          Sem {planWeek} · {blockLabel(planWeek)}
+        </span>
+        <a href="/progreso-fuerza" class="text-xs text-blue hover:underline">Ver progreso</a>
+      </div>
+    </div>
+
+    {
+      deload && template && (
+        <div class="rounded-xl border border-orange/30 bg-orange/10 p-4">
+          <p class="text-sm font-semibold text-orange">Semana de descarga</p>
+          <p class="mt-1 text-sm text-muted">
+            Las series ya vienen reducidas a la mitad y el RIR sube a 4, con el mismo peso.
+            La descarga de carrera va sincronizada: el volumen baja un 30%.
+          </p>
+        </div>
+      )
+    }
+
+    {
+      template?.warning && (
+        <div class="rounded-xl border border-border2 bg-surface2 px-4 py-3 text-sm text-muted">
+          {template.warning}
+        </div>
+      )
+    }
+
+    {
+      !template ? (
+        <div class="rounded-xl border border-border2 bg-surface p-6 text-center">
+          <p class="text-sm text-muted">{dayPlan.detail}</p>
+          <p class="mt-4 text-xs text-muted2">
+            Las sesiones de fuerza son lunes (A), martes (B) y jueves (C).
+          </p>
+          <a href="/calendario" class="mt-4 inline-block rounded-lg bg-surface2 px-4 py-2 text-sm font-semibold text-primary hover:bg-border2">
+            Ver el calendario
+          </a>
+        </div>
+      ) : (
+        <>
+          <details class="rounded-xl border border-border2 bg-surface p-4">
+            <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
+              Calentamiento <span class="font-normal text-muted">({WARMUP.minutes} min)</span>
+            </summary>
+            <div class="mt-3 space-y-3">
+              {WARMUP.blocks.map((block) => (
+                <div>
+                  <p class="text-xs uppercase tracking-wider text-muted2">{block.label}</p>
+                  <ul class="mt-1 space-y-0.5">
+                    {block.items.map((item) => (
+                      <li class="text-sm text-muted">· {item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </details>
+
+          <div class="space-y-4" id="exercises">
+            {session!.exercises.map((exercise) => (
+              <ExerciseCard exercise={exercise} unit={unit} cue={cueBySlug[exercise.slug] ?? ""} />
+            ))}
+          </div>
+
+          <section class="space-y-4 rounded-xl border border-border2 bg-surface p-4">
+            <h2 class="text-sm font-semibold text-primary">Cierre de sesión</h2>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="mb-1.5 block text-xs uppercase tracking-wider text-muted" for="rpeGlobal">
+                  RPE global
+                </label>
+                <input id="rpeGlobal" type="number" min="1" max="10"
+                  class="w-full rounded-lg border border-border2 bg-surface2 px-3 py-2.5 text-primary focus:outline-hidden focus:border-yellow"
+                  value={session!.rpeGlobal ?? ""} placeholder="8" />
+              </div>
+              <div>
+                <label class="mb-1.5 block text-xs uppercase tracking-wider text-muted" for="sleepHours">
+                  Horas de sueño
+                </label>
+                <input id="sleepHours" type="number" min="0" max="24" step="0.5"
+                  class="w-full rounded-lg border border-border2 bg-surface2 px-3 py-2.5 text-primary focus:outline-hidden focus:border-yellow"
+                  value={session!.sleepHours ?? ""} placeholder="7.5" />
+              </div>
+            </div>
+            <p id="sleep-warning" class="hidden rounded-lg border border-orange/30 bg-orange/10 px-3 py-2 text-xs text-orange">
+              Con menos de 6 h, rutina.md §4D manda convertir esta sesión en una versión
+              RIR 4 y no subir peso: entrenar duro sin dormir genera daño sin adaptación.
+            </p>
+            <div>
+              <label class="mb-1.5 block text-xs uppercase tracking-wider text-muted" for="note">Nota</label>
+              <textarea id="note" rows="2" maxlength="1000"
+                class="w-full resize-none rounded-lg border border-border2 bg-surface2 px-3 py-2.5 text-sm text-primary placeholder:text-muted2 focus:outline-hidden focus:border-yellow"
+                placeholder="¿Cómo fue?">{session!.note}</textarea>
+            </div>
+          </section>
+
+          <div class="sticky bottom-24 z-30 md:bottom-6">
+            <button id="finish-btn" type="button"
+              class="w-full rounded-xl bg-yellow py-4 text-base font-bold text-ink shadow-xl transition-all active:scale-95">
+              Terminar sesión
+              <span id="session-pct" class="ml-1 font-normal opacity-70">
+                ({session!.sessionCompletionPct}%)
+              </span>
+            </button>
+          </div>
+        </>
+      )
+    }
+  </div>
+
+  <!-- Temporizador de descanso: flota sobre el contenido durante la pausa y
+       ofrece registrar agua sin salir de la sesión. -->
+  <div
+    id="rest-timer"
+    class="fixed inset-x-3 bottom-24 z-40 hidden md:inset-x-auto md:right-6 md:bottom-6 md:w-72"
+  >
+    <div class="rounded-xl border border-blue/30 bg-surface shadow-xl">
+      <div class="flex items-center gap-3 p-4">
+        <span id="rest-remaining" class="font-display text-3xl tabular-nums text-blue">90</span>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs uppercase tracking-wider text-muted">Descanso</p>
+          <div class="mt-1 h-1 overflow-hidden rounded-full bg-surface2">
+            <div id="rest-bar" class="h-full bg-blue transition-[width] duration-1000 ease-linear" style="width:100%"></div>
+          </div>
+        </div>
+        <button id="rest-skip" type="button" aria-label="Saltar el descanso"
+          class="rounded-lg p-1.5 text-muted2 transition-colors hover:bg-surface2 hover:text-primary">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <button id="rest-water" type="button"
+        class="w-full border-t border-border py-2.5 text-xs font-semibold text-blue transition-colors hover:bg-blue/10">
+        + 250 ml de agua
+      </button>
+    </div>
+  </div>
 </Layout>
+
+<script>
+  import { DENSIFICATION_LADDER } from "../data/plan";
+  import { parseLoad } from "../lib/units";
+
+  function init() {
+    const root = document.getElementById("strength-root");
+    if (!root || root.dataset.hasSession !== "1") return;
+
+    const date = root.dataset.date!;
+    const unit = (root.dataset.unit ?? "lb") as "kg" | "lb";
+
+    // ── Autoguardado ────────────────────────────────────────────────────
+    let saveTimer: number | undefined;
+    let saving = false;
+
+    function collect(status: string) {
+      const exercises = [...document.querySelectorAll<HTMLElement>(".exercise-card")].map((card) => ({
+        slug: card.dataset.slug,
+        densificationStep: Number(card.querySelector<HTMLSelectElement>(".ex-step")!.value),
+        sets: [...card.querySelectorAll<HTMLElement>(".set-row")].map((row) => {
+          const reps = row.querySelector<HTMLInputElement>(".set-reps")!.value;
+          const load = row.querySelector<HTMLInputElement>(".set-load")!.value;
+          const rir = row.querySelector<HTMLInputElement>(".set-rir")!.value;
+          return {
+            reps: reps === "" ? null : Number(reps),
+            // El usuario teclea en su unidad; al servidor van siempre kilos.
+            loadKg: load === "" ? null : parseLoad(Number(load), unit),
+            rir: rir === "" ? null : Number(rir),
+            completed: row.querySelector<HTMLButtonElement>(".set-done")!.getAttribute("aria-pressed") === "true",
+            restTakenSeconds: null,
+          };
+        }),
+      }));
+
+      const value = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value ?? "";
+      return {
+        date,
+        status,
+        exercises,
+        rpeGlobal: value("rpeGlobal") === "" ? null : Number(value("rpeGlobal")),
+        sleepHours: value("sleepHours") === "" ? null : Number(value("sleepHours")),
+        note: (document.getElementById("note") as HTMLTextAreaElement | null)?.value ?? "",
+      };
+    }
+
+    async function save(status = "in_progress") {
+      if (saving) return;
+      saving = true;
+      try {
+        const response = await fetch("/api/strength", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(collect(status)),
+        });
+        if (!response.ok) return;
+
+        // El servidor recalcula los derivados: se repintan con SU respuesta,
+        // no con un cálculo paralelo en el cliente que podría divergir.
+        const { session } = await response.json();
+        document.getElementById("session-pct")!.textContent = `(${session.sessionCompletionPct}%)`;
+        for (const exercise of session.exercises) {
+          const card = document.querySelector<HTMLElement>(`[data-slug="${exercise.slug}"]`);
+          if (!card) continue;
+          card.querySelector(".ex-pct")!.textContent = `${exercise.completionPct}%`;
+          card.querySelector(".ex-maxed")!.classList.toggle("hidden", !exercise.loadMaxed);
+        }
+      } finally {
+        saving = false;
+      }
+    }
+
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => save(), 700);
+    }
+
+    // ── Temporizador de descanso ────────────────────────────────────────
+    const timerEl = document.getElementById("rest-timer")!;
+    const remainingEl = document.getElementById("rest-remaining")!;
+    const barEl = document.getElementById("rest-bar")!;
+    let restInterval: number | undefined;
+
+    function stopRest() {
+      clearInterval(restInterval);
+      timerEl.classList.add("hidden");
+    }
+
+    function startRest(seconds: number) {
+      if (seconds <= 0) return; // Las superseries encadenan sin descanso.
+      clearInterval(restInterval);
+      let left = seconds;
+
+      const paint = () => {
+        remainingEl.textContent = String(left);
+        barEl.style.width = `${(left / seconds) * 100}%`;
+      };
+      paint();
+      timerEl.classList.remove("hidden");
+
+      restInterval = window.setInterval(() => {
+        left -= 1;
+        if (left <= 0) {
+          stopRest();
+          window.showToast?.("Descanso terminado");
+          return;
+        }
+        paint();
+      }, 1000);
+    }
+
+    document.getElementById("rest-skip")!.addEventListener("click", stopRest);
+
+    document.getElementById("rest-water")!.addEventListener("click", async () => {
+      // Integración con el módulo de hidratación: la toma queda trazada a la
+      // sesión de fuerza, que es lo que pedía el requisito de "agua por serie".
+      const response = await fetch("/api/water", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ml: 250, date, source: "during-set" }),
+      });
+      if (!response.ok) return;
+      const { day } = await response.json();
+      const badge = document.getElementById("nav-water-pct");
+      if (badge) badge.textContent = `${Math.min(100, Math.round((day.totalMl / day.goalMl) * 100))}%`;
+      window.showToast?.("+250 ml registrados");
+    });
+
+    // ── Interacciones de las series ─────────────────────────────────────
+    for (const card of document.querySelectorAll<HTMLElement>(".exercise-card")) {
+      const restSeconds = Number(card.dataset.rest);
+
+      for (const row of card.querySelectorAll<HTMLElement>(".set-row")) {
+        const done = row.querySelector<HTMLButtonElement>(".set-done")!;
+        const reps = row.querySelector<HTMLInputElement>(".set-reps")!;
+
+        done.addEventListener("click", () => {
+          const pressed = done.getAttribute("aria-pressed") === "true";
+          const next = !pressed;
+
+          // Marcar sin reps no significa nada: se asume el mínimo prescrito.
+          if (next && reps.value === "") reps.value = reps.placeholder;
+
+          done.setAttribute("aria-pressed", String(next));
+          done.classList.toggle("border-yellow", next);
+          done.classList.toggle("bg-yellow", next);
+          done.classList.toggle("text-ink", next);
+          done.classList.toggle("border-border2", !next);
+          done.classList.toggle("text-muted2", !next);
+
+          if (next) startRest(restSeconds);
+          scheduleSave();
+        });
+
+        for (const input of row.querySelectorAll<HTMLInputElement>("input")) {
+          input.addEventListener("input", scheduleSave);
+        }
+      }
+
+      const step = card.querySelector<HTMLSelectElement>(".ex-step")!;
+      step.addEventListener("change", () => {
+        const rung = DENSIFICATION_LADDER[Number(step.value) - 1];
+        if (rung) card.querySelector(".ex-step-how")!.textContent = rung.how;
+        scheduleSave();
+      });
+    }
+
+    for (const id of ["rpeGlobal", "sleepHours", "note"]) {
+      document.getElementById(id)?.addEventListener("input", scheduleSave);
+    }
+
+    // Aviso de autorregulación por sueño (rutina.md §4D).
+    const sleep = document.getElementById("sleepHours") as HTMLInputElement;
+    const sleepWarning = document.getElementById("sleep-warning")!;
+    const checkSleep = () => {
+      const hours = Number(sleep.value);
+      sleepWarning.classList.toggle("hidden", !(sleep.value !== "" && hours > 0 && hours < 6));
+    };
+    sleep.addEventListener("input", checkSleep);
+    checkSleep();
+
+    document.getElementById("finish-btn")!.addEventListener("click", async () => {
+      await save("completed");
+      window.showToast?.("Sesión guardada");
+      setTimeout(() => (window.location.href = "/progreso-fuerza"), 800);
+    });
+  }
+
+  document.addEventListener("astro:page-load", init);
+</script>

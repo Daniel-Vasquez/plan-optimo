@@ -1,7 +1,7 @@
 import type { Collection } from 'mongodb';
 import { getDb } from './client';
 import { COLLECTIONS } from './schema';
-import type { Profile, RunningSession, WaterLog } from '../../types/models';
+import type { Profile, RunningSession, StrengthSession, WaterLog } from '../../types/models';
 
 /**
  * Accesos tipados a las colecciones. Los nombres y los índices viven en
@@ -19,4 +19,8 @@ export function waterLogsCollection(): Collection<WaterLog> {
 
 export function runningSessionsCollection(): Collection<RunningSession> {
   return getDb().collection<RunningSession>(COLLECTIONS.runningSessions);
+}
+
+export function strengthSessionsCollection(): Collection<StrengthSession> {
+  return getDb().collection<StrengthSession>(COLLECTIONS.strengthSessions);
 }

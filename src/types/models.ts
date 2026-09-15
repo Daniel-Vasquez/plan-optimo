@@ -167,3 +167,77 @@ export interface RunningSession extends BaseDoc {
   shoes: string | null;
   note: string;
 }
+
+/** Estado de una sesión de fuerza. */
+export type StrengthStatus = 'planned' | 'in_progress' | 'completed' | 'skipped';
+
+/** Una serie ejecutada. */
+export interface StrengthSet {
+  index: number;
+  reps: number | null;
+  loadKg: number | null;
+  rir: number | null;
+  completed: boolean;
+  /** Descanso realmente tomado; alimenta el peldaño de densidad. */
+  restTakenSeconds: number | null;
+}
+
+/** Instantánea de lo prescrito ese día, copiada de la plantilla. */
+export interface AssignedWork {
+  sets: number;
+  repMin: number;
+  repMax: number;
+  targetRir: number;
+  restSeconds: number;
+  tempo: string | null;
+  loadKg: number | null;
+  loadMode: 'perHand' | 'total' | 'bodyweight';
+  unilateral: boolean;
+}
+
+/** Un ejercicio dentro de una sesión ejecutada. */
+export interface StrengthExercise {
+  slug: string;
+  name: string;
+  order: number;
+  supersetGroup: string | null;
+  /**
+   * Lo asignado se congela aquí. Si mañana cambia la plantilla, las sesiones
+   * históricas siguen mostrando contra qué se comparó cada día.
+   */
+  assigned: AssignedWork;
+  /** Peldaño de la Escalera de Densificación (1-10). */
+  densificationStep: number;
+  sets: StrengthSet[];
+  /** Derivados, calculados al guardar. */
+  totalReps: number;
+  assignedReps: number;
+  volumeKg: number;
+  completionPct: number;
+  bestSetE1rmKg: number | null;
+  /**
+   * Doble progresión cumplida: todas las series al tope del rango con el RIR
+   * objetivo. Como por encima de 35 lb no hay material, en vez de subir peso
+   * toca subir un peldaño de la Escalera de Densificación.
+   */
+  loadMaxed: boolean;
+}
+
+/** Una sesión de fuerza. */
+export interface StrengthSession extends BaseDoc {
+  date: DateStr;
+  templateId: 'A' | 'B' | 'C';
+  label: string;
+  planWeek: number;
+  blockWeek: number;
+  isDeload: boolean;
+  status: StrengthStatus;
+  exercises: StrengthExercise[];
+  sessionVolumeKg: number;
+  sessionCompletionPct: number;
+  durationSeconds: number | null;
+  rpeGlobal: number | null;
+  /** Alimenta la regla de autorregulación de <6 h de sueño. */
+  sleepHours: number | null;
+  note: string;
+}

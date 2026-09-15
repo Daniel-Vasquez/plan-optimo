@@ -26,6 +26,7 @@ export const COLLECTIONS = {
   profiles: 'profiles',
   waterLogs: 'water_logs',
   runningSessions: 'running_sessions',
+  strengthSessions: 'strength_sessions',
 } as const;
 
 /**
@@ -66,6 +67,20 @@ export async function ensureIndexes(db: Db): Promise<string[]> {
   // Para las gráficas filtradas por tipo de sesión.
   created.push(
     await runs.createIndex({ userId: 1, runType: 1, date: -1 }, { name: 'userId_runType_date' }),
+  );
+
+  // Una sesión de fuerza por día: el plan nunca programa dos, y la unicidad
+  // evita duplicados si se guarda dos veces desde pestañas distintas.
+  const strength = db.collection(COLLECTIONS.strengthSessions);
+  created.push(
+    await strength.createIndex({ userId: 1, date: -1 }, { unique: true, name: 'userId_date_unique' }),
+  );
+  // Para la gráfica de progresión de un ejercicio concreto.
+  created.push(
+    await strength.createIndex(
+      { userId: 1, 'exercises.slug': 1, date: 1 },
+      { name: 'userId_exerciseSlug_date' },
+    ),
   );
 
   return created;

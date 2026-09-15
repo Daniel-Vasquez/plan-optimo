@@ -1,0 +1,105 @@
+---
+import Layout from "../layouts/Layout.astro";
+import StrengthCharts from "../components/strength/StrengthCharts.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import { MUSCLE_BY_SLUG, listStrengthSessions } from "../lib/db/repos/strength";
+import { volumeByMuscle } from "../lib/strength";
+import { formatLoad } from "../lib/units";
+import { RUN_TYPE_COLORS } from "../lib/run-stats";
+import { STRENGTH_TEMPLATES } from "../data/plan";
+
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+const unit = profile?.displayUnit ?? "lb";
+
+const sessions = await listStrengthSessions(user.id, 200);
+const chrono = [...sessions].reverse();
+const done = chrono.filter((s) => s.status === "completed" || s.sessionVolumeKg > 0);
+
+const muscles = volumeByMuscle(done, MUSCLE_BY_SLUG);
+
+const payload = JSON.stringify({
+  sessions: done.map((s) => ({
+    date: s.date,
+    volumeKg: Math.round(s.sessionVolumeKg),
+    completionPct: s.sessionCompletionPct,
+    templateId: s.templateId,
+    isDeload: s.isDeload,
+  })),
+  muscles,
+  // Amarillo de fuerza, del mismo sistema visual ya validado.
+  primaryColor: RUN_TYPE_COLORS.vo2max,
+  deloadColor: RUN_TYPE_COLORS.easy,
+});
+
+const totalVolume = done.reduce((sum, s) => sum + s.sessionVolumeKg, 0);
+const avgCompletion = done.length
+  ? Math.round(done.reduce((sum, s) => sum + s.sessionCompletionPct, 0) / done.length)
+  : 0;
+
+const stats = [
+  { label: "Sesiones", value: String(done.length), unit: "" },
+  { label: "Volumen total", value: totalVolume ? formatLoad(totalVolume, unit, false) : "—", unit },
+  { label: "Cumplimiento medio", value: done.length ? `${avgCompletion}%` : "—", unit: "" },
+];
+
+---
+
+<Layout title="Progreso de fuerza" currentPage="fuerza">
+  <div class="mx-auto max-w-4xl space-y-5 px-4 py-6 lg:px-8 lg:py-8">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h1 class="font-display text-3xl text-primary">PROGRESO DE FUERZA</h1>
+      <a href="/fuerza" class="rounded-lg bg-yellow px-4 py-2.5 text-sm font-bold text-ink transition-all hover:opacity-90 active:scale-95">
+        Sesión de hoy
+      </a>
+    </div>
+
+    <section class="rounded-xl border border-border2 bg-surface p-4 lg:p-6">
+      <div class="grid grid-cols-3 gap-4">
+        {
+          stats.map((stat) => (
+            <div>
+              <p class="mb-1 text-xs uppercase tracking-wider text-muted">{stat.label}</p>
+              <p class="text-xl font-bold text-primary">
+                {stat.value}
+                {stat.unit && <span class="ml-1 text-sm font-normal text-muted">{stat.unit}</span>}
+              </p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <StrengthCharts payload={payload} hasData={done.length > 0} />
+
+    <section class="rounded-xl border border-border2 bg-surface p-4 lg:p-6">
+      <h2 class="mb-4 text-sm font-semibold text-primary">Ejercicios del plan</h2>
+      <div class="space-y-4">
+        {
+          STRENGTH_TEMPLATES.map((template) => (
+            <div>
+              <p class="mb-2 text-xs uppercase tracking-wider text-muted2">
+                Fuerza {template.templateId} · {template.label}
+              </p>
+              <ul class="space-y-1">
+                {template.exercises.map((exercise) => (
+                  <li>
+                    <a
+                      href={`/ejercicios/${exercise.slug}`}
+                      class="flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-surface2"
+                    >
+                      <span class="min-w-0 truncate text-primary">{exercise.name}</span>
+                      <span class="shrink-0 text-xs tabular-nums text-muted">
+                        {exercise.sets} × {exercise.repMin}-{exercise.repMax}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+  </div>
+</Layout>

@@ -2,7 +2,7 @@
 
 > **Documento de arquitectura y hoja de ruta.** Fase 1: análisis y planificación. No se ha escrito ni modificado código de aplicación.
 > **Fuentes del análisis:** estructura real del repositorio (`src/`, `astro.config.mjs`, `package.json`, `tailwind.config.js`) y el plan de entrenamiento `rutina.md`.
-> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-4 ✅ completadas · siguiente: Tanda 5 (plan y fuerza).
+> **Fecha:** 2026-09-14 · **Estado:** Tandas 0-5 ✅ completadas · siguiente: Tanda 6 (nutrición).
 
 ---
 
@@ -664,7 +664,7 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 
 ---
 
-### Tanda 5 — Plan de entrenamiento y módulo de Fuerza
+### Tanda 5 — Plan de entrenamiento y módulo de Fuerza ✅ *completada*
 
 **Objetivo:** la tanda más grande. Digitalizar `rutina.md` y registrar series/reps reales contra las asignadas.
 
@@ -681,10 +681,16 @@ Cada tanda deja la aplicación **funcionando y desplegable**. No se empieza una 
 **Archivos a crear:** `src/data/plan.ts`, `src/data/exercises.ts`, `src/lib/plan.ts`, `src/lib/strength.ts` (e1RM, volumen, doble progresión, escalera), `src/lib/db/repos/strength.ts`, `src/lib/db/repos/plan.ts`, `src/pages/fuerza/index.astro`, `src/pages/fuerza/[date].astro`, `src/pages/fuerza/historial.astro`, `src/pages/progreso-fuerza.astro`, `src/pages/ejercicios/index.astro`, `src/pages/ejercicios/[slug].astro`, `src/components/strength/SessionRunner.astro`, `src/components/strength/ExerciseCard.astro`, `src/components/strength/SetRow.astro`, `src/components/strength/RestTimer.astro`, `src/components/strength/DensificationPicker.astro`, `src/pages/api/strength.ts`, `src/pages/api/plan.ts`
 **Archivos a modificar:** `src/pages/day/index.astro` (se descompone), `src/components/SessionBadge.astro`
 
-**Requiero de tu lado:**
-1. **Validar la transcripción del plan** antes de sembrarlo: te presento `src/data/plan.ts` en tabla para que confirmes pesos, series y reps.
-2. Confirmar si quieres registrar el peso en **libras** (como está en la rutina) mostrándolo en libras aunque se guarde en kg.
-3. Confirmar la **fecha de inicio real del plan** (define en qué semana del ciclo estás).
+**Notas de ejecución**
+- `src/data/plan.ts` es ya la única fuente de verdad del entrenamiento. El `DAY_SESSION_MAP` duplicado de `storage.js` y `day/index.astro` queda obsoleto: decía «Sentadilla goblet» y «Hip thrust» donde la rutina manda búlgara y peso muerto rumano.
+- Lo asignado se reconstruye **en el servidor** en cada guardado; no se acepta del cliente. Verificado: una petición que pide «1 serie de 1 rep con 999 kg» recibe las 4 × 8-10 con 35 lb de la plantilla.
+- Los bloques de 4 semanas sobrescriben el RIR de la plantilla (§4C manda sobre §3): semana 1 RIR 3, semana 4 RIR 4 con las series a la mitad y el mismo peso.
+- El volumen cuenta ×2 las mancuernas a dos manos y ×2 los unilaterales por lado. Sin eso se subestimaría el trabajo a la mitad.
+- El cumplimiento se compara contra el extremo **bajo** del rango: hacer 4×8 de un 4×8-10 es cumplir al 100%, no al 80%.
+- El botón de agua del temporizador de descanso cierra la integración con la Tanda 3: la toma se guarda con `source: 'during-set'`.
+- 29 pruebas nuevas (132 en total).
+
+**Pendiente de tu lado:** validar la tabla de transcripción (pesos, series y reps) contra `rutina.md §3`. Las unidades (libras en pantalla, kilos en base) y la fecha de inicio ya se configuran desde `/ajustes`.
 
 ---
 
