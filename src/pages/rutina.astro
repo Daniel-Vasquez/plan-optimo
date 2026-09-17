@@ -117,7 +117,7 @@ const INDEX = [
           {
             PLAN_PROTEINA.map((item) => (
               <li class="flex flex-wrap items-start gap-3 border-b border-border pb-2.5 last:border-0 last:pb-0">
-                <span class="w-32 shrink-0 text-sm font-semibold text-primary">{item.comida}</span>
+                <span class="w-24 shrink-0 text-sm font-semibold text-primary sm:w-32">{item.comida}</span>
                 <p class="min-w-0 flex-1 text-sm leading-relaxed text-muted">{item.ajuste}</p>
                 <Chip tone="accent">{item.proteina}</Chip>
               </li>
@@ -426,7 +426,7 @@ const INDEX = [
             METRICAS_SEGUIMIENTO.map((item) => (
               <div
                 class:list={[
-                  "flex flex-wrap items-center gap-3 rounded-xl border p-3",
+                  "flex flex-wrap flex-col items-start gap-3 rounded-xl border p-3 sm:flex-row sm:items-center",
                   "destacada" in item && item.destacada
                     ? "border-yellow/30 bg-yellow/5"
                     : "border-border bg-surface2/40",
