@@ -1,0 +1,107 @@
+---
+import Icon, { type IconName } from '../nav/Icon.astro';
+
+/**
+ * Submenú de secciones de la rutina.
+ *
+ * Se ancla bajo la barra principal al desplazar. Tres detalles que lo hacen
+ * funcionar:
+ *
+ * - `sticky` sólo actúa dentro del bloque de su padre, así que este componente
+ *   debe ser hermano de las secciones, no ir dentro de la cabecera: metido ahí
+ *   se despegaría en cuanto la cabecera saliera de pantalla.
+ * - `top-14 lg:top-16` es exactamente el alto de la barra principal, para que
+ *   quede pegado debajo sin solaparse ni dejar hueco.
+ * - `z-40` queda por debajo de la barra principal (`z-50`) y por encima del
+ *   contenido, que es el orden que evita que el menú de usuario quede tapado.
+ *
+ * El fondo es opaco con desenfoque: sin él, el texto de la página pasaría por
+ * detrás de los botones y los volvería ilegibles.
+ */
+export interface Props {
+  items: readonly { id: string; label: string; short: string; icon: IconName }[];
+}
+
+const { items } = Astro.props;
+---
+
+<nav
+  aria-label="Secciones de la rutina"
+  class="sticky top-14 z-40 -mx-4 border-y border-border bg-base/90 px-4 py-2 backdrop-blur-xs lg:top-16 lg:-mx-8 lg:px-8"
+>
+  <ul class="scrollbar-hide flex items-center gap-1.5 overflow-x-auto">
+    {
+      items.map((item) => (
+        <li class="flex-1">
+          <a
+            href={`#${item.id}`}
+            aria-label={item.label}
+            class="section-link flex items-center justify-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm text-muted transition-colors hover:border-border2 hover:bg-surface hover:text-primary"
+            data-section={item.id}
+          >
+            <Icon name={item.icon} class="w-4 h-4 shrink-0" />
+            {/* En móvil sólo el icono: cuatro etiquetas no caben sin recortarse.
+                El texto no se elimina del DOM, se oculta. */}
+            <span class="hidden whitespace-nowrap md:inline">{item.short}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>
+
+<script>
+  /**
+   * Resalta la sección que se está leyendo.
+   *
+   * Con IntersectionObserver y no con un listener de scroll: el navegador
+   * avisa sólo cuando una sección entra o sale, en vez de hacernos recalcular
+   * posiciones en cada píxel desplazado.
+   */
+  let observer: IntersectionObserver | undefined;
+
+  function init() {
+    observer?.disconnect();
+
+    const links = [...document.querySelectorAll<HTMLElement>('.section-link')];
+    if (links.length === 0) return;
+
+    const sections = links
+      .map((link) => document.getElementById(link.dataset.section!))
+      .filter((section): section is HTMLElement => section !== null);
+
+    function activate(id: string) {
+      for (const link of links) {
+        const on = link.dataset.section === id;
+        link.classList.toggle('bg-surface', on);
+        link.classList.toggle('border-border2', on);
+        link.classList.toggle('text-primary', on);
+        link.classList.toggle('text-muted', !on);
+        link.classList.toggle('border-transparent', !on);
+        if (on) link.setAttribute('aria-current', 'true');
+        else link.removeAttribute('aria-current');
+      }
+    }
+
+    observer = new IntersectionObserver(
+      (entries) => {
+        // Puede haber varias secciones visibles a la vez; gana la más alta.
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) activate(visible[0].target.id);
+      },
+      {
+        // El margen superior descuenta las dos barras fijas, para que una
+        // sección cuente como "activa" cuando asoma bajo ellas y no antes.
+        rootMargin: '-140px 0px -60% 0px',
+        threshold: 0,
+      },
+    );
+
+    for (const section of sections) observer.observe(section);
+  }
+
+  document.addEventListener('astro:page-load', init);
+  document.addEventListener('astro:before-swap', () => observer?.disconnect());
+</script>

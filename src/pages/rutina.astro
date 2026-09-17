@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import Section from "../components/rutina/Section.astro";
 import Chip from "../components/rutina/Chip.astro";
 import ExerciseRow from "../components/rutina/ExerciseRow.astro";
+import SectionNav from "../components/rutina/SectionNav.astro";
 import { getProfile } from "../lib/db/repos/profiles";
 import {
   BLOCK_RULES, DENSIFICATION_LADDER, FRIDAY_CORE, STRENGTH_TEMPLATES, WARMUP, WEEK_PATTERN,
@@ -33,12 +34,15 @@ const KIND_TONE: Record<string, "neutral" | "accent" | "info" | "warn"> = {
 };
 
 const card = "rounded-2xl border border-border2 bg-surface p-5 lg:p-6";
+// `label` es el nombre completo de la sección y va al aria-label; `short` es
+// lo que se ve en escritorio. El corto está contenido en el largo, que es lo
+// que exige el criterio de "etiqueta en el nombre" de accesibilidad.
 const INDEX = [
-  { id: "nutricion", n: "1", label: "Nutrición e hidratación" },
-  { id: "cronograma", n: "2", label: "Cronograma semanal" },
-  { id: "fuerza", n: "3", label: "Rutina de fuerza" },
-  { id: "progresion", n: "4", label: "Estrategia de progresión" },
-];
+  { id: "nutricion", label: "Nutrición e hidratación", short: "Nutrición", icon: "nutricion" },
+  { id: "cronograma", label: "Cronograma semanal", short: "Cronograma", icon: "calendario" },
+  { id: "fuerza", label: "Rutina de fuerza", short: "Fuerza", icon: "fuerza" },
+  { id: "progresion", label: "Estrategia de progresión", short: "Progresión", icon: "progresion" },
+] as const;
 ---
 
 <Layout title="Rutina" currentPage="rutina">
@@ -67,21 +71,9 @@ const INDEX = [
         <p class="text-xs font-semibold uppercase tracking-wider text-orange">Antes de entrar</p>
         <p class="mt-1.5 text-sm leading-relaxed text-muted">{PERFIL.limitante}</p>
       </div>
-
-      <nav aria-label="Secciones de la rutina" class="flex flex-wrap gap-2">
-        {
-          INDEX.map((item) => (
-            <a
-              href={`#${item.id}`}
-              class="flex items-center gap-2 rounded-lg border border-border2 bg-surface px-3 py-2 text-sm text-muted transition-colors hover:border-yellow/40 hover:text-primary"
-            >
-              <span class="font-display text-base text-yellow">{item.n}</span>
-              {item.label}
-            </a>
-          ))
-        }
-      </nav>
     </header>
+
+    <SectionNav items={INDEX} />
 
     <!-- 1. Nutrición -->
     <Section number="1" title="Nutrición e hidratación" id="nutricion">

@@ -14,7 +14,9 @@ export interface Props {
 const { number, title, id } = Astro.props;
 ---
 
-<section id={id} class="scroll-mt-20">
+{/* El desplazamiento del ancla lo pone `scroll-padding-top` en <html>;
+    repetirlo aquí con `scroll-mt` lo sumaría dos veces. */}
+<section id={id}>
   <header class="mb-4 flex items-center gap-3">
     <span
       class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-yellow font-display text-lg text-ink"

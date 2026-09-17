@@ -79,6 +79,26 @@
 @layer base {
   html {
     font-family: var(--font-body);
+
+    /* Desplazamiento suave al saltar a un ancla de la misma página.
+       `scroll-padding-top` reserva el alto de las barras fijas para que la
+       sección aterrice debajo y no tapada por ellas: la superior (3.5rem, 4rem
+       en escritorio) más el submenú pegajoso de /rutina y un respiro. */
+    scroll-behavior: smooth;
+    scroll-padding-top: 7.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      scroll-padding-top: 8rem;
+    }
+  }
+
+  /* Quien ha pedido menos movimiento no debería ver la página deslizarse. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 
   * {
