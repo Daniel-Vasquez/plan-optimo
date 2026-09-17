@@ -1,0 +1,61 @@
+---
+import Chip from './Chip.astro';
+import type { ExerciseTemplate } from '../../data/plan';
+import type { WeightUnit } from '../../types/models';
+import { formatLoad, repRange } from '../../lib/units';
+
+/**
+ * Un ejercicio de la rutina, en modo lectura.
+ *
+ * Los datos duros (series, reps, RIR, descanso, tempo, carga) van en chips
+ * porque son lo que se consulta a mitad de serie; la técnica va debajo, en
+ * texto, porque se lee una vez y se interioriza.
+ */
+export interface Props {
+  exercise: ExerciseTemplate;
+  unit: WeightUnit;
+}
+
+const { exercise, unit } = Astro.props;
+---
+
+<article class="rounded-xl border border-border bg-surface2/40 p-4">
+  <div class="flex items-start gap-3">
+    <span
+      class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-surface2 text-xs font-semibold text-muted"
+      aria-hidden="true"
+    >
+      {exercise.supersetGroup ? `${exercise.supersetGroup}${exercise.order % 2 === 1 ? 'A' : 'B'}` : exercise.order}
+    </span>
+
+    <div class="min-w-0 flex-1">
+      <h4 class="font-semibold text-primary">{exercise.name}</h4>
+
+      <div class="mt-2 flex flex-wrap gap-1.5">
+        <Chip tone="accent" label="series">{exercise.sets} × {repRange(exercise)}</Chip>
+        <Chip label="rir">{exercise.targetRir}</Chip>
+        <Chip label="descanso">
+          {exercise.restSeconds === 0 ? 'superserie' : `${exercise.restSeconds}"`}
+        </Chip>
+        {exercise.tempo && <Chip label="tempo">{exercise.tempo}</Chip>}
+        <Chip tone="info" label="carga">
+          {
+            exercise.startLoadKg === null
+              ? 'peso corporal'
+              : `${formatLoad(exercise.startLoadKg, unit)}${exercise.loadMode === 'perHand' ? ' ×2' : ''}`
+          }
+        </Chip>
+      </div>
+
+      <p class="mt-2.5 text-sm leading-relaxed text-muted">{exercise.cue}</p>
+
+      <div class="mt-2 flex flex-wrap gap-1">
+        {
+          exercise.muscleGroups.map((muscle) => (
+            <span class="text-[11px] text-muted2">#{muscle}</span>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</article>

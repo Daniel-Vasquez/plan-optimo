@@ -1,0 +1,30 @@
+---
+/**
+ * Sección numerada de la rutina.
+ *
+ * El número va en un círculo a la izquierda del título para que las cuatro
+ * secciones se reconozcan al hojear, igual que en el documento original.
+ */
+export interface Props {
+  number: string;
+  title: string;
+  id: string;
+}
+
+const { number, title, id } = Astro.props;
+---
+
+<section id={id} class="scroll-mt-20">
+  <header class="mb-4 flex items-center gap-3">
+    <span
+      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-yellow font-display text-lg text-ink"
+      aria-hidden="true">{number}</span
+    >
+    <h2 class="font-display text-2xl tracking-wide text-primary lg:text-3xl">
+      {title.toUpperCase()}
+    </h2>
+  </header>
+  <div class="space-y-4">
+    <slot />
+  </div>
+</section>

@@ -21,5 +21,6 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { id: 'nutricion', href: '/nutricion', label: 'Nutrición', icon: 'nutricion' },
   { id: 'agua', href: '/hidratacion', label: 'Agua', icon: 'agua' },
   { id: 'calendario', href: '/calendario', label: 'Calendario', icon: 'calendario' },
+  { id: 'rutina', href: '/rutina', label: 'Rutina', icon: 'rutina' },
   { id: 'notas', href: '/notas', label: 'Notas', icon: 'notas' },
 ];

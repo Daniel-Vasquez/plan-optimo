@@ -1,0 +1,462 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Section from "../components/rutina/Section.astro";
+import Chip from "../components/rutina/Chip.astro";
+import ExerciseRow from "../components/rutina/ExerciseRow.astro";
+import { getProfile } from "../lib/db/repos/profiles";
+import {
+  BLOCK_RULES, DENSIFICATION_LADDER, FRIDAY_CORE, STRENGTH_TEMPLATES, WARMUP, WEEK_PATTERN,
+} from "../data/plan";
+import {
+  AJUSTE_CALORICO, CORRECCION_RITMOS, DIAGNOSTICO_NUTRICION, DOBLE_PROGRESION,
+  METRICAS_SEGUIMIENTO, NOTA_CARRERA, NOTA_CIERRE, PERFIL, PLAN_PROTEINA,
+  PROGRESION_CARRERA, RAZON_PIERNA_MARTES, REGLAS_AUTORREGULACION, RITMOS_OBJETIVO, TIMING,
+} from "../data/rutina";
+
+const user = Astro.locals.user!;
+const profile = await getProfile(user.id);
+const unit = profile?.displayUnit ?? "lb";
+
+// La semana arranca en lunes, como el plan; WEEK_PATTERN usa 0 = domingo.
+const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAY_NAMES: Record<number, string> = {
+  1: "Lunes", 2: "Martes", 3: "Miércoles", 4: "Jueves",
+  5: "Viernes", 6: "Sábado", 0: "Domingo",
+};
+
+const KIND_TONE: Record<string, "neutral" | "accent" | "info" | "warn"> = {
+  strength: "accent",
+  running: "info",
+  volleyball: "info",
+  walk: "neutral",
+  rest: "neutral",
+};
+
+const card = "rounded-2xl border border-border2 bg-surface p-5 lg:p-6";
+const INDEX = [
+  { id: "nutricion", n: "1", label: "Nutrición e hidratación" },
+  { id: "cronograma", n: "2", label: "Cronograma semanal" },
+  { id: "fuerza", n: "3", label: "Rutina de fuerza" },
+  { id: "progresion", n: "4", label: "Estrategia de progresión" },
+];
+---
+
+<Layout title="Rutina" currentPage="rutina">
+  <div class="mx-auto max-w-4xl space-y-8 px-4 py-6 lg:px-8 lg:py-10">
+    <!-- Cabecera -->
+    <header class="space-y-4">
+      <div>
+        <p class="text-xs uppercase tracking-wider text-muted">Plan de 12 semanas</p>
+        <h1 class="mt-1 font-display text-4xl tracking-wide text-primary lg:text-5xl">
+          RECOMPOSICIÓN + 5K
+        </h1>
+        <p class="mt-2 text-sm text-muted">{PERFIL.descripcion}</p>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        {
+          PERFIL.objetivos.map((objetivo, i) => (
+            <Chip tone={i === 0 ? "accent" : "neutral"} label={`${i + 1}`}>{objetivo}</Chip>
+          ))
+        }
+      </div>
+
+      <p class="text-xs text-muted2">{PERFIL.marcas}</p>
+
+      <div class="rounded-2xl border border-orange/30 bg-orange/10 p-4">
+        <p class="text-xs font-semibold uppercase tracking-wider text-orange">Antes de entrar</p>
+        <p class="mt-1.5 text-sm leading-relaxed text-muted">{PERFIL.limitante}</p>
+      </div>
+
+      <nav aria-label="Secciones de la rutina" class="flex flex-wrap gap-2">
+        {
+          INDEX.map((item) => (
+            <a
+              href={`#${item.id}`}
+              class="flex items-center gap-2 rounded-lg border border-border2 bg-surface px-3 py-2 text-sm text-muted transition-colors hover:border-yellow/40 hover:text-primary"
+            >
+              <span class="font-display text-base text-yellow">{item.n}</span>
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
+    </header>
+
+    <!-- 1. Nutrición -->
+    <Section number="1" title="Nutrición e hidratación" id="nutricion">
+      <div class={card}>
+        <h3 class="mb-4 text-sm font-semibold text-primary">Diagnóstico y ajustes</h3>
+        <div class="space-y-3">
+          {
+            DIAGNOSTICO_NUTRICION.map((item) => (
+              <div
+                class:list={[
+                  "rounded-xl border p-4",
+                  item.prioritario ? "border-yellow/30 bg-yellow/5" : "border-border bg-surface2/40",
+                ]}
+              >
+                <div class="flex items-center gap-2">
+                  <h4 class="font-semibold text-primary">{item.punto}</h4>
+                  {item.prioritario && <Chip tone="accent">prioritario</Chip>}
+                </div>
+                <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <p class="text-[11px] uppercase tracking-wider text-muted2">Ahora</p>
+                    <p class="text-sm text-muted">{item.actual}</p>
+                  </div>
+                  <div>
+                    <p class="text-[11px] uppercase tracking-wider text-muted2">Ajuste</p>
+                    <p class="text-sm text-primary">{item.ajuste}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <div class={card}>
+        <h3 class="mb-1 text-sm font-semibold text-primary">
+          Cómo llegar a 130 g de proteína
+        </h3>
+        <p class="mb-4 text-xs text-muted">Sin cambiar tu estructura de comidas.</p>
+        <ul class="space-y-2.5">
+          {
+            PLAN_PROTEINA.map((item) => (
+              <li class="flex flex-wrap items-start gap-3 border-b border-border pb-2.5 last:border-0 last:pb-0">
+                <span class="w-32 shrink-0 text-sm font-semibold text-primary">{item.comida}</span>
+                <p class="min-w-0 flex-1 text-sm leading-relaxed text-muted">{item.ajuste}</p>
+                <Chip tone="accent">{item.proteina}</Chip>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class={card}>
+        <h3 class="mb-4 text-sm font-semibold text-primary">Timing clave</h3>
+        <div class="grid gap-3 sm:grid-cols-3">
+          {
+            TIMING.map((item) => (
+              <div class="rounded-xl border border-border bg-surface2/40 p-4">
+                <p class="text-xs uppercase tracking-wider text-blue">{item.cuando}</p>
+                <p class="mt-0.5 font-semibold text-primary">{item.que}</p>
+                <p class="mt-2 text-sm leading-relaxed text-muted">{item.detalle}</p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </Section>
+
+    <!-- 2. Cronograma -->
+    <Section number="2" title="Cronograma semanal" id="cronograma">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          WEEK_ORDER.map((dow) => {
+            const day = WEEK_PATTERN[dow]!;
+            const isRest = day.kind === "rest";
+            return (
+              <article
+                class:list={[
+                  "rounded-2xl border p-4 transition-colors",
+                  isRest ? "border-dashed border-border2 bg-transparent" : "border-border2 bg-surface",
+                ]}
+              >
+                <div class="flex items-baseline justify-between gap-2">
+                  <h3 class="font-display text-xl tracking-wide text-primary">
+                    {DAY_NAMES[dow]!.toUpperCase()}
+                  </h3>
+                  <Chip tone={KIND_TONE[day.kind]}>{day.label}</Chip>
+                </div>
+                <p class="mt-2 text-sm leading-relaxed text-muted">{day.detail}</p>
+              </article>
+            );
+          })
+        }
+      </div>
+
+      <div class={card}>
+        <h3 class="mb-3 text-sm font-semibold text-primary">{RAZON_PIERNA_MARTES.titulo}</h3>
+        <div class="space-y-2">
+          {
+            RAZON_PIERNA_MARTES.razones.map((razon) => (
+              <div
+                class:list={[
+                  "rounded-xl border p-3",
+                  "esLaElegida" in razon && razon.esLaElegida
+                    ? "border-yellow/30 bg-yellow/5"
+                    : "border-border bg-surface2/40",
+                ]}
+              >
+                <p class="text-sm font-semibold text-primary">{razon.caso}</p>
+                <p class="mt-1 text-sm leading-relaxed text-muted">{razon.problema}</p>
+              </div>
+            ))
+          }
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-muted">{RAZON_PIERNA_MARTES.cierre}</p>
+      </div>
+
+      <div class={card}>
+        <h3 class="mb-1 text-sm font-semibold text-primary">Ritmos objetivo</h3>
+        <p class="mb-4 text-xs text-muted">Calculados desde tu 5K de 30:40.</p>
+        <div class="space-y-2">
+          {
+            RITMOS_OBJETIVO.map((item) => (
+              <div class="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface2/40 p-3">
+                <span class="w-40 shrink-0 text-sm font-semibold text-primary">{item.sesion}</span>
+                <Chip tone="info" label="min/km">{item.ritmo}</Chip>
+                <p class="min-w-0 flex-1 text-sm text-muted">{item.detalle}</p>
+              </div>
+            ))
+          }
+        </div>
+        <div class="mt-4 rounded-xl border border-orange/30 bg-orange/10 p-4">
+          <p class="text-xs font-semibold uppercase tracking-wider text-orange">
+            Corrección importante
+          </p>
+          <p class="mt-1.5 text-sm leading-relaxed text-muted">{CORRECCION_RITMOS}</p>
+        </div>
+      </div>
+
+      <div class={card}>
+        <h3 class="mb-4 text-sm font-semibold text-primary">Progresión de las sesiones de carrera</h3>
+        <div class="space-y-3">
+          {
+            PROGRESION_CARRERA.map((bloque) => (
+              <div class="rounded-xl border border-border bg-surface2/40 p-4">
+                <Chip tone="accent" label="semanas">{bloque.semanas}</Chip>
+                <dl class="mt-3 grid gap-2 sm:grid-cols-3">
+                  {[
+                    ["VO₂máx", bloque.vo2max],
+                    ["Umbral", bloque.umbral],
+                    ["Domingo", bloque.domingo],
+                  ].map(([label, value]) => (
+                    <div>
+                      <dt class="text-[11px] uppercase tracking-wider text-muted2">{label}</dt>
+                      <dd class="text-sm text-primary">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))
+          }
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-muted">{NOTA_CARRERA}</p>
+      </div>
+    </Section>
+
+    <!-- 3. Fuerza -->
+    <Section number="3" title="Rutina de fuerza" id="fuerza">
+      <details class={card}>
+        <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
+          Calentamiento <span class="font-normal text-muted">({WARMUP.minutes} min, igual para las 3 sesiones)</span>
+        </summary>
+        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+          {
+            WARMUP.blocks.map((block) => (
+              <div class="rounded-xl border border-border bg-surface2/40 p-3">
+                <p class="text-[11px] uppercase tracking-wider text-muted2">{block.label}</p>
+                <ul class="mt-1.5 space-y-1">
+                  {block.items.map((item) => (
+                    <li class="text-sm leading-relaxed text-muted">· {item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          }
+        </div>
+      </details>
+
+      {
+        STRENGTH_TEMPLATES.map((template) => (
+          <div class={card}>
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-baseline gap-3">
+                <span class="font-display text-3xl text-yellow">{template.templateId}</span>
+                <div>
+                  <h3 class="font-semibold text-primary">{template.label}</h3>
+                  <p class="text-xs text-muted">{DAY_NAMES[template.dayOfWeek]}</p>
+                </div>
+              </div>
+              <Chip label="ejercicios">{template.exercises.length}</Chip>
+            </div>
+
+            {template.warning && (
+              <p class="mb-4 rounded-xl border border-orange/30 bg-orange/10 px-4 py-3 text-sm leading-relaxed text-orange">
+                {template.warning}
+              </p>
+            )}
+
+            <div class="space-y-3">
+              {template.exercises.map((exercise) => (
+                <ExerciseRow exercise={exercise} unit={unit} />
+              ))}
+            </div>
+          </div>
+        ))
+      }
+
+      <div class={card}>
+        <h3 class="mb-1 text-sm font-semibold text-primary">{FRIDAY_CORE.label}</h3>
+        <p class="mb-4 text-xs text-muted">{FRIDAY_CORE.note}</p>
+        <ul class="grid gap-2 sm:grid-cols-2">
+          {
+            FRIDAY_CORE.exercises.map((exercise) => (
+              <li class="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface2/40 px-3 py-2.5">
+                <span class="text-sm text-primary">{exercise.name}</span>
+                <Chip>{exercise.prescription}</Chip>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </Section>
+
+    <!-- 4. Progresión -->
+    <Section number="4" title="Estrategia de progresión" id="progresion">
+      <div class={card}>
+        <h3 class="mb-4 text-sm font-semibold text-primary">A. Doble progresión</h3>
+        <ol class="space-y-2">
+          {
+            DOBLE_PROGRESION.pasos.map((paso, i) => (
+              <li class="flex gap-3">
+                <span
+                  class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface2 text-xs font-semibold text-muted"
+                  aria-hidden="true"
+                >{i + 1}</span>
+                <p class="text-sm leading-relaxed text-muted">{paso}</p>
+              </li>
+            ))
+          }
+        </ol>
+        <div class="mt-4 rounded-xl border border-border bg-surface2/40 p-4">
+          <p class="text-xs uppercase tracking-wider text-muted2">
+            Ejemplo · {DOBLE_PROGRESION.ejemplo.titulo}
+          </p>
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            {
+              DOBLE_PROGRESION.ejemplo.series.map((serie, i) => (
+                <Chip tone={i === DOBLE_PROGRESION.ejemplo.series.length - 1 ? "accent" : "neutral"}>
+                  {serie}
+                </Chip>
+              ))
+            }
+          </div>
+          <p class="mt-2.5 text-sm leading-relaxed text-muted">{DOBLE_PROGRESION.ejemplo.cierre}</p>
+        </div>
+      </div>
+
+      <div class={card}>
+        <h3 class="mb-1 text-sm font-semibold text-primary">B. Escalera de Densificación</h3>
+        <p class="mb-4 text-xs text-muted">
+          Cuando se acaba el peso. Sube un peldaño cada 1-2 semanas y no los saltes.
+        </p>
+        <ol class="space-y-2">
+          {
+            DENSIFICATION_LADDER.map((rung) => (
+              <li class="flex gap-3 rounded-xl border border-border bg-surface2/40 p-3">
+                <span
+                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-yellow/15 font-display text-base text-yellow"
+                  aria-hidden="true"
+                >{rung.step}</span>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-primary">{rung.method}</p>
+                  <p class="mt-0.5 text-sm leading-relaxed text-muted">{rung.how}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+
+      <div class={card}>
+        <h3 class="mb-4 text-sm font-semibold text-primary">C. Bloques de 4 semanas</h3>
+        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {
+            BLOCK_RULES.labels.map((label, i) => {
+              const isDeload = i + 1 === BLOCK_RULES.deloadBlockWeek;
+              return (
+                <div
+                  class:list={[
+                    "rounded-xl border p-4",
+                    isDeload ? "border-orange/30 bg-orange/10" : "border-border bg-surface2/40",
+                  ]}
+                >
+                  <p class="text-[11px] uppercase tracking-wider text-muted2">Semana {i + 1}</p>
+                  <p class:list={["mt-0.5 font-semibold", isDeload ? "text-orange" : "text-primary"]}>
+                    {label}
+                  </p>
+                  <div class="mt-2">
+                    <Chip tone={isDeload ? "warn" : "neutral"} label="rir">
+                      {BLOCK_RULES.rirByBlockWeek[i]}
+                    </Chip>
+                  </div>
+                  {isDeload && (
+                    <p class="mt-2 text-xs leading-relaxed text-muted">
+                      Series a la mitad, mismo peso. El volumen de carrera baja un 30%.
+                    </p>
+                  )}
+                </div>
+              );
+            })
+          }
+        </div>
+        <p class="mt-3 text-sm leading-relaxed text-muted">
+          Las descargas de fuerza y carrera van sincronizadas. Es el error más común del
+          entrenamiento concurrente: descargar una cosa mientras la otra sigue al máximo.
+        </p>
+      </div>
+
+      <div class={card}>
+        <h3 class="mb-1 text-sm font-semibold text-primary">D. Reglas de autorregulación</h3>
+        <p class="mb-4 text-xs text-muted">
+          El documento las llama obligatorias. La app te avisa cuando se cumplen.
+        </p>
+        <ul class="space-y-2">
+          {
+            REGLAS_AUTORREGULACION.map((regla) => (
+              <li class="rounded-xl border border-border bg-surface2/40 p-3">
+                <p class="text-sm font-semibold text-orange">{regla.condicion}</p>
+                <p class="mt-1 text-sm leading-relaxed text-muted">{regla.accion}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class={card}>
+        <h3 class="mb-4 text-sm font-semibold text-primary">E. Cómo mides que funciona</h3>
+        <div class="space-y-2">
+          {
+            METRICAS_SEGUIMIENTO.map((item) => (
+              <div
+                class:list={[
+                  "flex flex-wrap items-center gap-3 rounded-xl border p-3",
+                  "destacada" in item && item.destacada
+                    ? "border-yellow/30 bg-yellow/5"
+                    : "border-border bg-surface2/40",
+                ]}
+              >
+                <span class="w-48 shrink-0 text-sm font-semibold text-primary">{item.metrica}</span>
+                <Chip>{item.frecuencia}</Chip>
+                <p class="min-w-0 flex-1 text-sm text-muted">{item.esperado}</p>
+              </div>
+            ))
+          }
+        </div>
+        <p class="mt-3 rounded-xl border border-border bg-surface2/40 px-4 py-3 text-sm leading-relaxed text-muted">
+          {AJUSTE_CALORICO}
+        </p>
+      </div>
+    </Section>
+
+    <!-- Cierre -->
+    <footer class="rounded-2xl border border-border2 bg-surface p-5 lg:p-6">
+      <p class="text-xs uppercase tracking-wider text-muted2">Nota de cierre</p>
+      <p class="mt-2 text-sm leading-relaxed text-muted">{NOTA_CIERRE}</p>
+    </footer>
+  </div>
+</Layout>
