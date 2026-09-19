@@ -86,7 +86,7 @@ const dateFmt = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short
 
     <form id="body-form" class="space-y-4 rounded-xl border border-border2 bg-surface p-5" novalidate>
       <h2 class="text-sm font-semibold text-primary">Registrar</h2>
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
           <label class={label} for="date">Fecha</label>
           <input id="date" name="date" type="date" class={field} value={todayMetric?.date ?? today} />
