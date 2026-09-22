@@ -30,6 +30,12 @@ const { exercise, unit } = Astro.props;
 
     <div class="min-w-0 flex-1">
       <h4 class="font-semibold text-primary">{exercise.name}</h4>
+      <img
+        src={`/images-exercises/${exercise.name}.webp`}
+        alt={exercise.name}
+        class="max-w-sm h-52 mt-3 mb-4 rounded-lg object-cover"
+        loading="lazy"
+      />
 
       <div class="mt-2 flex flex-wrap gap-1.5">
         <Chip tone="accent" label="series">{exercise.sets} × {repRange(exercise)}</Chip>
